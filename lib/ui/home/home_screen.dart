@@ -115,9 +115,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const BIcon(BIcons.search, size: 19),
               ),
               IconButton(
-                tooltip: 'Service menu',
+                tooltip: 'Settings',
                 onPressed: () => AppNavigator.openSettings(context),
-                icon: const BIcon(BIcons.gear, size: 19, secondPath: BIcons.gearCircle),
+                icon: const Icon(Icons.settings_outlined, size: 22),
               ),
             ],
           ),
