@@ -14,6 +14,7 @@ import 'ui/navigation/app_navigator.dart';
 import 'ui/queue/queue_screen.dart';
 import 'ui/settings/settings_screen.dart';
 import 'ui/shell/app_shell.dart';
+import 'ui/theme/locale_controller.dart';
 import 'ui/theme/theme_controller.dart';
 import 'ui/theme/timbre_theme.dart';
 
@@ -27,6 +28,9 @@ Future<void> main() async {
       'dark' => ThemeMode.dark,
       _ => ThemeMode.system,
     },
+  );
+  final localeController = LocaleController(
+    prefs.getString('settings.localeMode') ?? LocaleController.keySystem,
   );
 
   final db = await LibraryRepository.openDatabase();
@@ -50,6 +54,7 @@ Future<void> main() async {
     query: query,
     handler: handler,
     themeController: themeController,
+    localeController: localeController,
   ));
 }
 
@@ -58,6 +63,7 @@ class TimbreApp extends StatelessWidget {
   final OnAudioQuery query;
   final TimbreAudioHandler handler;
   final ThemeController themeController;
+  final LocaleController localeController;
 
   const TimbreApp({
     super.key,
@@ -65,6 +71,7 @@ class TimbreApp extends StatelessWidget {
     required this.query,
     required this.handler,
     required this.themeController,
+    required this.localeController,
   });
 
   @override
@@ -78,14 +85,18 @@ class TimbreApp extends StatelessWidget {
           create: (_) => AppState(library: library, player: handler),
         ),
         ChangeNotifierProvider<ThemeController>.value(value: themeController),
+        ChangeNotifierProvider<LocaleController>.value(
+            value: localeController),
       ],
       child: AnimatedBuilder(
-        animation: themeController,
+        animation:
+            Listenable.merge([themeController, localeController]),
         builder: (context, _) => MaterialApp(
           title: 'Timbre',
           theme: TimbreTheme.light(),
           darkTheme: TimbreTheme.dark(),
           themeMode: themeController.mode,
+          locale: localeController.locale,
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,

@@ -11,6 +11,7 @@ import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../../state/notification_permission.dart';
 import '../../update/app_updater.dart';
+import '../theme/locale_controller.dart';
 import '../theme/theme_controller.dart';
 
 /// Settings: theme, history management, updates, notifications, about.
@@ -23,6 +24,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _themeMode = 'system';
+  String _localeMode = LocaleController.keySystem;
   bool _busy = false;
 
   final AppUpdater _updater = AppUpdater();
@@ -40,7 +42,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     SharedPreferences.getInstance().then((prefs) {
       if (mounted) {
-        setState(() => _themeMode = prefs.getString('settings.themeMode') ?? 'system');
+        setState(() {
+          _themeMode = prefs.getString('settings.themeMode') ?? 'system';
+          _localeMode = prefs.getString('settings.localeMode') ??
+              LocaleController.keySystem;
+        });
       }
     });
     PackageInfo.fromPlatform().then((info) {
@@ -66,6 +72,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('settings.themeMode', mode);
     if (mounted) {
       context.read<ThemeController>().update(mode);
+    }
+  }
+
+  Future<void> _setLocale(String mode) async {
+    setState(() => _localeMode = mode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('settings.localeMode', mode);
+    if (mounted) {
+      context.read<LocaleController>().update(mode);
     }
   }
 
@@ -178,6 +193,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'dark' => strings.dark,
           _ => strings.followSystem,
         };
+    String localeLabel(String mode) => switch (mode) {
+          LocaleController.keyEnglish => strings.langEnglish,
+          LocaleController.keyArabic => strings.langArabic,
+          _ => strings.langSystem,
+        };
 
     return Scaffold(
       appBar: AppBar(title: Text(strings.settingsTitle)),
@@ -192,6 +212,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 for (final mode in const ['system', 'light', 'dark'])
                   RadioListTile<String>(
                     title: Text(themeLabel(mode)),
+                    value: mode,
+                  ),
+              ],
+            ),
+          ),
+          const Divider(),
+          _SectionLabel(strings.languageSection),
+          RadioGroup<String>(
+            groupValue: _localeMode,
+            onChanged: (v) => _setLocale(v!),
+            child: Column(
+              children: [
+                for (final mode in const [
+                  LocaleController.keySystem,
+                  LocaleController.keyEnglish,
+                  LocaleController.keyArabic,
+                ])
+                  RadioListTile<String>(
+                    title: Text(localeLabel(mode)),
                     value: mode,
                   ),
               ],

@@ -144,6 +144,10 @@
 
   "settingsTitle": "الإعدادات",
   "appearance": "المظهر",
+  "languageSection": "اللغة",
+  "langSystem": "لغة النظام",
+  "langEnglish": "الإنجليزية",
+  "langArabic": "العربية",
   "followSystem": "اتباع النظام",
   "light": "فاتح",
   "dark": "داكن",

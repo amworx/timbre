@@ -806,6 +806,30 @@ abstract class AppLocalizations {
   /// **'Appearance'**
   String get appearance;
 
+  /// No description provided for @languageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get languageSection;
+
+  /// No description provided for @langSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get langSystem;
+
+  /// No description provided for @langEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get langEnglish;
+
+  /// No description provided for @langArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic'**
+  String get langArabic;
+
   /// No description provided for @followSystem.
   ///
   /// In en, this message translates to:

@@ -412,6 +412,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appearance => 'المظهر';
 
   @override
+  String get languageSection => 'اللغة';
+
+  @override
+  String get langSystem => 'لغة النظام';
+
+  @override
+  String get langEnglish => 'الإنجليزية';
+
+  @override
+  String get langArabic => 'العربية';
+
+  @override
   String get followSystem => 'اتباع النظام';
 
   @override

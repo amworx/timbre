@@ -411,6 +411,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearance => 'Appearance';
 
   @override
+  String get languageSection => 'Language';
+
+  @override
+  String get langSystem => 'System default';
+
+  @override
+  String get langEnglish => 'English';
+
+  @override
+  String get langArabic => 'Arabic';
+
+  @override
   String get followSystem => 'Follow system';
 
   @override

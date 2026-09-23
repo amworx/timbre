@@ -144,6 +144,10 @@
 
   "settingsTitle": "Settings",
   "appearance": "Appearance",
+  "languageSection": "Language",
+  "langSystem": "System default",
+  "langEnglish": "English",
+  "langArabic": "Arabic",
   "followSystem": "Follow system",
   "light": "Light",
   "dark": "Dark",
