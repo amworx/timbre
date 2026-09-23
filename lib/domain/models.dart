@@ -18,6 +18,7 @@ class Song {
   final int? trackNumber;
   final String uri;
   final String? mimeType;
+  final String filePath;
   final int fileSize;
   final DateTime dateAdded;
   final String folder;
@@ -35,6 +36,7 @@ class Song {
     this.trackNumber,
     required this.uri,
     this.mimeType,
+    this.filePath = '',
     required this.fileSize,
     required this.dateAdded,
     required this.folder,

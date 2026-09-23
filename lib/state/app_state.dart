@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
+import 'package:share_plus/share_plus.dart' as share;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/library_repository.dart';
 import '../domain/flow_queue.dart';
 import '../domain/models.dart';
+import '../media/media_files.dart';
 import '../playback/timbre_audio_handler.dart';
 
 /// Library load state for the whole app.
@@ -347,6 +349,114 @@ class AppState extends ChangeNotifier {
   }
 
   // ------------------------------------------------------------------
+  // Share & delete (device files)
+  // ------------------------------------------------------------------
+
+  final MediaFiles mediaFiles = MediaFiles();
+
+  /// Shares the audio [songs] as files through the system sheet.
+  /// Returns how many were attached; [ShareOutcome.attached] == 0 means
+  /// none of the files were reachable (message explains why).
+  Future<ShareOutcome> shareSongs(List<Song> songs) async {
+    final files = <share.XFile>[];
+    for (final s in songs) {
+      final path = s.filePath;
+      if (path.isEmpty) continue;
+      try {
+        if (!File(path).existsSync()) continue;
+      } catch (_) {
+        continue;
+      }
+      files.add(share.XFile(
+        path,
+        mimeType: mimeForPath(path),
+        name: _shareFileName(s, path),
+      ));
+    }
+    if (files.isEmpty) {
+      return const ShareOutcome(
+        attached: 0,
+        message: 'Audio file not available for sharing.',
+      );
+    }
+    await share.SharePlus.instance.share(share.ShareParams(
+      files: files,
+      text: songs.length == 1
+          ? '${songs.first.title} — ${songs.first.artist}'
+          : '${songs.length} songs from Timbre',
+    ));
+    return ShareOutcome(attached: files.length);
+  }
+
+  String _shareFileName(Song song, String path) {
+    final ext = path.contains('.') ? path.split('.').last : 'mp3';
+    final base = '${song.artist} - ${song.title}'
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .trim();
+    final trimmed = base.isEmpty ? 'timbre-audio' : base;
+    return '$trimmed.$ext';
+  }
+
+  /// Deletes [songs] from device storage via the MediaStore consent flow,
+  /// then purges every app-owned trace and refreshes the in-memory library.
+  /// Never throws: per-file problems are counted in the returned summary.
+  Future<DeleteSummary> deleteSongs(List<Song> targets) async {
+    var deleted = 0;
+    var denied = 0;
+    var failed = 0;
+    String? lastMessage;
+    final deletedIds = <int>{};
+
+    for (final song in targets) {
+      final outcome = await mediaFiles.deleteSong(song);
+      switch (outcome.status) {
+        case MediaDeleteStatus.deleted:
+          deleted++;
+          deletedIds.add(song.id);
+        case MediaDeleteStatus.denied:
+          denied++;
+          lastMessage = outcome.message;
+        case MediaDeleteStatus.unavailable:
+        case MediaDeleteStatus.failed:
+          failed++;
+          lastMessage = outcome.message;
+      }
+    }
+
+    if (deletedIds.isNotEmpty) {
+      final currentDeleted =
+          currentSong != null && deletedIds.contains(currentSong!.id);
+      final remaining =
+          songs.where((s) => !deletedIds.contains(s.id)).toList();
+      songs = remaining;
+      albums = library.albumsOf(remaining);
+      artists = library.artistsOf(remaining);
+      genres = library.genresOf(remaining);
+      folders = library.foldersOf(remaining);
+      favoriteIds = favoriteIds.difference(deletedIds);
+      playlists = await library.loadPlaylists();
+      await library.purgeSongs(deletedIds);
+      await _loadContinueEntry();
+      if (currentDeleted) {
+        if (hasNext) {
+          await next();
+        } else {
+          await player.pause();
+          await clearQueue();
+        }
+      }
+      notifyListeners();
+    }
+
+    return DeleteSummary(
+      deleted: deleted,
+      denied: denied,
+      failed: failed,
+      message: lastMessage,
+    );
+  }
+
+  // ------------------------------------------------------------------
   // Recently played
   // ------------------------------------------------------------------
 
@@ -416,6 +526,32 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> saveShowOnboarding(bool value) => _setSetting('showOnboarding', value);
+}
+
+/// Result of [AppState.shareSongs].
+class ShareOutcome {
+  final int attached;
+  final String? message;
+
+  const ShareOutcome({required this.attached, this.message});
+}
+
+/// Result of [AppState.deleteSongs]. Amounts always add up to the number
+/// of songs passed in.
+class DeleteSummary {
+  final int deleted;
+  final int denied;
+  final int failed;
+  final String? message;
+
+  const DeleteSummary({
+    required this.deleted,
+    required this.denied,
+    required this.failed,
+    this.message,
+  });
+
+  bool get allDeleted => denied == 0 && failed == 0;
 }
 
 /// Notes: no cloud, no accounts, no analytics. Only local files are read;

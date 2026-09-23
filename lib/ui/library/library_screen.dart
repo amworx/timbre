@@ -6,7 +6,9 @@ import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
 import '../components/formatters.dart';
-import '../components/song_row.dart';
+import '../components/song_actions_sheet.dart';
+import '../components/song_selection.dart';
+import '../components/swipe_song_row.dart';
 import '../navigation/app_navigator.dart';
 import '../theme/timbre_theme.dart';
 
@@ -178,20 +180,116 @@ class _Body extends StatelessWidget {
   }
 }
 
-class _SongsList extends StatelessWidget {
+class _SongsList extends StatefulWidget {
   final List<Song> songs;
 
   const _SongsList({required this.songs});
 
   @override
+  State<_SongsList> createState() => _SongsListState();
+}
+
+class _SongsListState extends State<_SongsList> {
+  final SongSelection _selection = SongSelection();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _selection.dispose();
+    super.dispose();
+  }
+
+  List<Song> get _selectedSongs => widget.songs
+      .where((s) => _selection.isSelected(s.id))
+      .toList(growable: false);
+
+  Future<void> _shareSelected() async {
+    final songs = _selectedSongs;
+    if (songs.isEmpty) return;
+    setState(() => _busy = true);
+    final outcome = await context.read<AppState>().shareSongs(songs);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (outcome.attached == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(outcome.message ?? 'Nothing to share.')),
+      );
+    } else {
+      _selection.clear();
+    }
+  }
+
+  Future<void> _deleteSelected() async {
+    final songs = _selectedSongs;
+    if (songs.isEmpty) return;
+    final confirmed = await confirmDeviceDelete(context, count: songs.length);
+    if (!confirmed || !mounted) return;
+    setState(() => _busy = true);
+    final summary = await context.read<AppState>().deleteSongs(songs);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    _selection.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          summary.deleted == songs.length
+              ? 'Deleted ${summary.deleted}.'
+              : 'Deleted ${summary.deleted} of ${songs.length}.'
+                  '${summary.message == null ? '' : ' ${summary.message}'}',
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 140, top: TimbreSpacing.sm),
-      itemCount: songs.length,
-      itemBuilder: (context, i) => SongRow(
-        key: ValueKey(songs[i].id),
-        song: songs[i],
-        queueContext: songs,
+    final songs = widget.songs;
+    // Back exits selection mode first (Gmail behavior), not the screen.
+    return ListenableBuilder(
+      listenable: _selection,
+      builder: (context, _) => PopScope(
+        canPop: !_selection.isSelecting,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _selection.clear();
+        },
+        child: Stack(
+          children: [
+            ListView.builder(
+          padding: const EdgeInsets.only(bottom: 140, top: TimbreSpacing.sm),
+          itemCount: songs.length,
+          itemBuilder: (context, i) => SwipeSongRow(
+            key: ValueKey('lib-${songs[i].id}'),
+            song: songs[i],
+            queueContext: songs,
+            selection: _selection,
+            keySuffix: 'lib',
+          ),
+        ),
+            Positioned(
+              left: 16,
+              right: 16,
+              // Above the mini player + navigation bar.
+              bottom: 148,
+              child: SelectionActionBar(
+                visible: _selection.isSelecting,
+                selectedCount: _selection.count,
+                totalCount: songs.length,
+                busy: _busy,
+                onClose: _selection.clear,
+                onSelectAll: () =>
+                    _selection.selectAll(songs.map((s) => s.id)),
+                onShare: _shareSelected,
+                onAddToPlaylist: () async {
+                  final selected = _selectedSongs;
+                  if (selected.isEmpty) return;
+                  await showPlaylistPickerForSongs(context, selected);
+                  _selection.clear();
+                },
+                onDelete: _deleteSelected,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -6,7 +6,9 @@ import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
 import '../components/formatters.dart';
-import '../components/song_row.dart';
+import '../components/song_actions_sheet.dart';
+import '../components/song_selection.dart';
+import '../components/swipe_song_row.dart';
 
 enum DetailKind { album, artist, genre, folder, playlist }
 
@@ -34,11 +36,62 @@ class _DetailScreenState extends State<DetailScreen> {
   bool _loading = true;
   int? _playlistId;
   String? _subtitle;
+  final SongSelection _selection = SongSelection();
+  bool _busy = false;
 
   @override
   void initState() {
     super.initState();
     _resolve();
+  }
+
+  @override
+  void dispose() {
+    _selection.dispose();
+    super.dispose();
+  }
+
+  List<Song> get _selectedSongs =>
+      _songs.where((s) => _selection.isSelected(s.id)).toList(growable: false);
+
+  Future<void> _shareSelected() async {
+    final songs = _selectedSongs;
+    if (songs.isEmpty) return;
+    setState(() => _busy = true);
+    final outcome = await context.read<AppState>().shareSongs(songs);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (outcome.attached == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(outcome.message ?? 'Nothing to share.')),
+      );
+    } else {
+      _selection.clear();
+    }
+  }
+
+  Future<void> _deleteSelected() async {
+    final songs = _selectedSongs;
+    if (songs.isEmpty) return;
+    final confirmed = await confirmDeviceDelete(context, count: songs.length);
+    if (!confirmed || !mounted) return;
+    setState(() => _busy = true);
+    final summary = await context.read<AppState>().deleteSongs(songs);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    _selection.clear();
+    await _resolve();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          summary.deleted == songs.length
+              ? 'Deleted ${summary.deleted}.'
+              : 'Deleted ${summary.deleted} of ${songs.length}.'
+                  '${summary.message == null ? '' : ' ${summary.message}'}',
+        ),
+      ),
+    );
   }
 
   Future<void> _resolve() async {
@@ -93,8 +146,18 @@ class _DetailScreenState extends State<DetailScreen> {
     final isFavorites = widget.kind == DetailKind.playlist && _playlistId == -1;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
+      // Back exits selection mode first (Gmail behavior), not the screen.
+      body: ListenableBuilder(
+        listenable: _selection,
+        builder: (context, _) => PopScope(
+          canPop: !_selection.isSelecting,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _selection.clear();
+          },
+          child: Stack(
+            children: [
+              CustomScrollView(
+                slivers: [
           SliverAppBar.large(
             expandedHeight: 200,
             title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -161,13 +224,41 @@ class _DetailScreenState extends State<DetailScreen> {
                   song: _songs[i],
                   songs: _songs,
                   playlistId: isFavorites ? null : _playlistId,
-                  onRemoved: _resolve,
+                  selection: _selection,
+                  onChanged: _resolve,
                 ),
                 childCount: _songs.length,
               ),
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 140)),
-        ],
+              const SliverToBoxAdapter(child: SizedBox(height: 140)),
+                ],
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                // Above the mini player + navigation bar.
+                bottom: 148,
+                child: SelectionActionBar(
+                  visible: _selection.isSelecting,
+                  selectedCount: _selection.count,
+                  totalCount: _songs.length,
+                  busy: _busy,
+                  onClose: _selection.clear,
+                  onSelectAll: () =>
+                      _selection.selectAll(_songs.map((s) => s.id)),
+                  onShare: _shareSelected,
+                  onAddToPlaylist: () async {
+                    final selected = _selectedSongs;
+                    if (selected.isEmpty) return;
+                    await showPlaylistPickerForSongs(context, selected);
+                    _selection.clear();
+                  },
+                  onDelete: _deleteSelected,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -240,25 +331,31 @@ class _HeaderArt extends StatelessWidget {
   }
 }
 
-/// Song row with optional playlist removal through the overflow menu.
+/// Swipeable song row with bulk-selection support. [onChanged] refreshes the
+/// snapshot-based list after a delete (the global library updates itself).
 class _SongTile extends StatelessWidget {
   final Song song;
   final List<Song> songs;
   final int? playlistId;
-  final VoidCallback onRemoved;
+  final SongSelection selection;
+  final VoidCallback onChanged;
 
   const _SongTile({
     required this.song,
     required this.songs,
     required this.playlistId,
-    required this.onRemoved,
+    required this.selection,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isFavPlaylist = playlistId != null && playlistId == -1;
-    final row = SongRow(song: song, queueContext: songs);
-    if (playlistId == null || isFavPlaylist) return row;
-    return row;
+    return SwipeSongRow(
+      song: song,
+      queueContext: songs,
+      selection: selection,
+      keySuffix: 'detail',
+      onAfterDelete: onChanged,
+    );
   }
 }

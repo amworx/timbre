@@ -89,6 +89,7 @@ class LibraryRepository {
         trackNumber: m.track,
         uri: m.uri ?? _fileUri(data),
         mimeType: null,
+        filePath: data,
         fileSize: m.size,
         dateAdded: DateTime.fromMillisecondsSinceEpoch(
           (m.dateAdded ?? 0) * 1000,
@@ -288,6 +289,31 @@ class LibraryRepository {
 
   Future<void> clearHistory() async {
     await db.delete('song_history');
+  }
+
+  /// Removes every app-owned trace of [ids] (favorites, history, playlist
+  /// entries) after the underlying files were deleted from MediaStore.
+  /// Playlist positions are re-normalized so ordering stays gap-free.
+  Future<void> purgeSongs(Set<int> ids) async {
+    if (ids.isEmpty) return;
+    final args = ids.toList(growable: false);
+    final placeholders = List.filled(args.length, '?').join(',');
+    await db.delete('favorites',
+        where: 'song_id IN ($placeholders)', whereArgs: args);
+    await db.delete('song_history',
+        where: 'song_id IN ($placeholders)', whereArgs: args);
+    final affected = await db.query(
+      'playlist_songs',
+      columns: const ['playlist_id'],
+      distinct: true,
+      where: 'song_id IN ($placeholders)',
+      whereArgs: args,
+    );
+    await db.delete('playlist_songs',
+        where: 'song_id IN ($placeholders)', whereArgs: args);
+    for (final row in affected) {
+      await _normalizePositions(row['playlist_id'] as int);
+    }
   }
 
   // ------------------------------------------------------------------
