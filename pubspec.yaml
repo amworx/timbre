@@ -21,6 +21,9 @@ dependencies:
   share_plus: ^13.3.0
   shared_preferences: ^2.5.5
   sqflite: ^2.4.4
+  ota_update: ^7.1.0
+  package_info_plus: ^10.2.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

@@ -112,6 +112,29 @@ Useful on-device probes (always with `-s <transport>`):
   (note: USER dir is `HP`, the username is `Admin` in some paths — check both).
 - Never `flutter run` without `--release` on this phone (rule 3).
 
+## In-app updates (added 2026-09-23, after first GitHub push)
+
+- Settings → Updates checks `api.github.com/repos/amworx/timbre/releases/latest`
+  and compares the tag against the installed version (`package_info_plus`).
+- Download + auto-install via `ota_update` 7.1.0 legacy flow: APK goes to
+  internal storage, then the system installer opens automatically (user taps
+  Install to finish). Needs `INTERNET` + `REQUEST_INSTALL_PACKAGES` in the
+  manifest, the `OtaUpdateFileProvider` entry, `res/xml/filepaths.xml`, and
+  core-library desugaring 2.1.4+ in `android/app/build.gradle.kts`.
+- Logic lives in `lib/update/app_updater.dart` (pure, unit-tested);
+  UI in `SettingsScreen` ("Updates" section); tests in
+  `test/update_check_test.dart` (20 tests: version compare, asset pick,
+  checksum extract, check-flow incl. offline/rate-limit/no-APK cases).
+- To ship an update users will see: bump `pubspec.yaml` version, then
+  `flutter build apk --release --target-platform android-arm64`, rename the
+  APK to include `arm64` (e.g. `timbre-v1.0.1-arm64.apk`), and attach it to
+  a GitHub release whose tag is the version (`v1.0.1`). Optional: add a
+  `sha256: <hex>` line to the release notes for checksum verification.
+- Verified: `flutter analyze` clean, `flutter test` 34/34 pass, release APK
+  builds (20.7MB). End-to-end on-device NOT yet tested — needs a published
+  release with an APK plus coordination (shared phone, installer steals
+  foreground).
+
 ## Suggested next steps (not started)
 
 - Full inset audit: bottom gesture-bar padding behind MiniPlayer/NavigationBar

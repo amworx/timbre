@@ -15,6 +15,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by ota_update 7.x (uses modern Java APIs).
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    dependencies {
+        // ota_update 7.x requires 2.1.4+ (enforced by checkReleaseAarMetadata).
+        coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     }
 
     defaultConfig {
