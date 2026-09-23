@@ -1,0 +1,6 @@
+flutter_launcher_icons:
+  android: true
+  image_path: "timbre_icon.png"
+  adaptive_icon_background: "#4338CA"
+  adaptive_icon_foreground: "timbre_icon_fg.png"
+  adaptive_icon_monochrome: "timbre_icon_mono.png"

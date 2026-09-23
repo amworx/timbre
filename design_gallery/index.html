@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timbre — Interactive Design Prototypes</title>
+<style>
+  :root{ --bg:#0b0b0e; --panel:#141419; --ink:#f0eff5; --dim:#9a97a8; --line:#26252f; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,sans-serif;padding:44px 24px 110px}
+  header{max-width:1120px;margin:0 auto 8px}
+  h1{font-size:28px;font-weight:700;letter-spacing:-.5px}
+  .sub{color:var(--dim);margin-top:10px;font-size:15px;max-width:760px;line-height:1.6}
+  .cards{max-width:1120px;margin:30px auto 0;display:flex;flex-direction:column;gap:30px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:28px;display:flex;gap:32px;align-items:flex-start}
+  .card.picked{border-color:#2f6e51;box-shadow:0 0 0 1px #2f6e51}
+  .meta{flex:1;min-width:300px}
+  .badge{display:inline-block;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+  .name{font-size:26px;font-weight:700;margin-bottom:4px;letter-spacing:-.3px}
+  .tagline{color:#c8c5d6;font-size:14px;margin-bottom:14px}
+  .desc{color:var(--dim);font-size:13.5px;line-height:1.65;margin-bottom:16px}
+  .try{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#b5b2c4;line-height:1.7}
+  .try b{color:var(--ink)}
+  button{cursor:pointer;border:0;border-radius:12px;padding:13px 22px;font-size:14px;font-weight:600;background:#6c5ce7;color:#fff;transition:all .15s}
+  button:hover{background:#5a4bd1}
+  .picked-label{display:none;background:#1e4d3a;color:#4ade80;text-align:center;font-weight:600;padding:12px;border-radius:12px;font-size:14px}
+  .card.picked button{display:none}
+  .card.picked .picked-label{display:block}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#12121acc;backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:10px;padding:12px;z-index:50}
+  .bar .sw{padding:10px 16px;border-radius:10px;background:#ffffff10;color:#cfccdd;font-weight:600;font-size:13px}
+  .bar .sw.on{background:#6c5ce7;color:#fff}
+  .bar .rst{background:#ffffff10;color:#cfccdd}
+  .toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%) translateY(20px);background:#26232f;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;transition:all .25s;pointer-events:none;z-index:60;max-width:80vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .phone{width:330px;height:660px;border-radius:34px;overflow:hidden;position:relative;flex-shrink:0;border:1px solid #000;box-shadow:0 14px 40px rgba(0,0,0,.55)}
+  .scr{position:absolute;inset:0;display:flex;flex-direction:column}
+  .scr.hid{display:none}
+  .tap{cursor:pointer;user-select:none}
+  .g1{background:linear-gradient(135deg,#7c6cf5,#4b3ac9)}
+  .g2{background:linear-gradient(135deg,#e8622c,#a83f14)}
+  .g3{background:linear-gradient(135deg,#2ea88a,#187059)}
+  .g4{background:linear-gradient(135deg,#f2b33d,#d97706)}
+  .g5{background:linear-gradient(135deg,#ff8ad4,#8b3dd6)}
+  .g6{background:linear-gradient(135deg,#5ea8f5,#2d5fd9)}
+  .g7{background:linear-gradient(135deg,#48485a,#26262f)}
+
+  /* ══════ A · BROADCAST ══════ */
+  .pa{background:#161310;color:#e8e2d6;font-family:Consolas,monospace}
+  .pa .pad{padding:18px 16px;display:flex;flex-direction:column;height:100%}
+  .pa .st{display:flex;justify-content:space-between;font-size:9px;color:#8a8272;margin-bottom:14px}
+  .pa .wm{font-size:12px;letter-spacing:4px;color:#ffb454;margin-bottom:10px}
+  .pa .wm b{color:#e8e2d6;font-weight:600}
+  .pa .dial{position:relative;height:52px;margin-bottom:2px}
+  .pa .dial .track{position:absolute;left:0;right:0;bottom:18px;height:2px;background:#3a3426}
+  .pa .stn{position:absolute;bottom:10px;width:1px;background:#4a4438}
+  .pa .stn i{position:absolute;bottom:12px;left:-14px;width:32px;text-align:center;font-size:8px;color:#8a8272;font-style:normal}
+  .pa .stn.on{background:#ffb454;width:2px}
+  .pa .stn.on i{color:#ffb454}
+  .pa .stn.tap{width:26px;bottom:0;height:44px;background:transparent;z-index:3}
+  .pa .freq{font-size:26px;color:#ffb454;letter-spacing:2px;text-align:center;margin:2px 0 2px}
+  .pa .flabel{font-size:9px;color:#8a8272;letter-spacing:3px;text-align:center;margin-bottom:12px}
+  .pa .guide{font-size:10px;letter-spacing:2px;color:#8a8272;border-top:1px solid #2c2820;padding-top:10px;margin-bottom:2px}
+  .pa .prog{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #221f18}
+  .pa .prog .t{color:#8a8272;font-size:11px;width:40px;flex-shrink:0}
+  .pa .prog .n{font-size:12.5px;color:#cfc8ba}
+  .pa .prog .n em{display:block;font-style:normal;font-size:9.5px;color:#8a8272;margin-top:2px}
+  .pa .live .n{color:#ffb454}
+  .pa .live .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#ffb454;margin-right:6px;box-shadow:0 0 6px #ffb454}
+  .pa .tune{margin-top:auto;background:#221e16;border:1px solid #3a3426;border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:11px}
+  .pa .tune .grille{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle,#3a3426 1.5px,#161310 1.6px);background-size:6px 6px;border:2px solid #3a3426;flex-shrink:0}
+  .pa .tune .tx{flex:1;min-width:0}
+  .pa .tune .tx b{display:block;font-size:11.5px;color:#ffb454;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pa .tune .tx span{font-size:9px;color:#8a8272}
+  .pa .tune .p{color:#ffb454;font-size:15px}
+  .pa .meter{display:flex;gap:3px;height:26px;align-items:flex-end;margin:10px 2px 14px;cursor:pointer}
+  .pa .meter i{width:4px;background:#2c2820;height:8px;border-radius:1px}
+  .pa .meter i.on{background:#ffb454;height:20px;box-shadow:0 0 5px #ffb45488}
+  .pa.npscr{background:#100e0b}
+  .pa .freq2{font-size:42px;color:#ffb454;letter-spacing:3px;text-align:center;margin-top:4px;text-shadow:0 0 24px #ffb45444}
+  .pa .sub2{text-align:center;font-size:10px;letter-spacing:3px;color:#8a8272;margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
+  .pa .speaker{width:164px;height:164px;margin:0 auto;border-radius:50%;background:radial-gradient(circle,#332d20 1.5px,#1a1712 1.6px);background-size:7px 7px;border:3px solid #2c2820;box-shadow:0 0 40px #ffb45422, inset 0 0 30px #000}
+  .pa .face{margin-top:auto;background:#1d1913;border:1px solid #3a3426;border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center}
+  .pa .face .btn{width:44px;height:44px;border-radius:8px;background:#2a2419;border:1px solid #453d2b;color:#cfc8ba;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .pa .face .btn.main{background:#ffb454;color:#161310;border:0;font-size:17px;box-shadow:0 0 18px #ffb45444}
+  .pa .face .btn.favOn{color:#ffb454;border-color:#ffb454}
+  .pa .qrow{display:flex;gap:10px;padding:10px 2px;border-bottom:1px solid #221f18;font-size:12px;align-items:baseline}
+  .pa .qrow .qi{color:#8a8272;width:22px}
+  .pa .qrow.on .n{color:#ffb454}
+  .pa .qrow .n{color:#cfc8ba;flex:1}
+  .pa .qrow .d{color:#8a8272;font-size:10px}
+  .pa .navrow{display:flex;justify-content:space-between;font-size:10px;letter-spacing:2px;color:#8a8272;margin-bottom:6px}
+  .pa .navrow span{cursor:pointer}
+  .pa .navrow span:active{color:#ffb454}
+  .pa .st .tap{cursor:pointer}
+  .pa .st .tap:active{color:#ffb454}
+  .pa .presets{display:flex;gap:6px;margin:10px 0 6px}
+  .pa .preset{flex:1;text-align:center;border:1px solid #3a3426;border-radius:7px;padding:8px 0;font-size:10px;letter-spacing:2px;color:#8a8272;cursor:pointer}
+  .pa .preset.on{border-color:#ffb454;color:#ffb454;box-shadow:0 0 8px #ffb45433}
+  .pa .plabel{font-size:8.5px;letter-spacing:2px;color:#8a8272;text-align:center;margin-bottom:8px}
+  .pa .scanbox{border:1px solid #3a3426;border-radius:9px;padding:10px 12px;margin-bottom:4px}
+  .pa .scanbox input{width:100%;background:transparent;border:0;outline:0;color:#ffb454;font:inherit;font-size:12px;letter-spacing:1px;caret-color:#ffb454}
+  .pa .scanbox input::placeholder{color:#6a6252}
+  .pa .prog.tap{cursor:pointer}
+  .pa .prog.tap:active .n{color:#ffb454}
+  svg.gi{width:1.05em;height:1.05em;display:inline-block;vertical-align:-0.16em}
+  .pa .face .btn .gi{width:16px;height:16px}
+  .pa .face .btn.main .gi{width:19px;height:19px}
+  .pa.day{background:#ece5d6;color:#332c20}
+  .pa.day .st,.pa.day .flabel,.pa.day .guide,.pa.day .prog .t,.pa.day .prog .n em,.pa.day .sub2,.pa.day .navrow,.pa.day .qrow .qi,.pa.day .qrow .d,.pa.day .plabel,.pa.day .preset{color:#8a8272}
+  .pa.day .stn{background:#c9bfa9}.pa.day .stn i{color:#8a8272}
+  .pa.day .stn.on{background:#b06a10}.pa.day .stn.on i{color:#b06a10}
+  .pa.day .freq,.pa.day .freq2{color:#b06a10;text-shadow:none}
+  .pa.day .wm b{color:#332c20}
+  .pa.day .prog .n,.pa.day .qrow .n{color:#332c20}
+  .pa.day .prog.live .n,.pa.day .qrow.on .n{color:#b06a10}
+  .pa.day .prog.live .dot{background:#b06a10;box-shadow:0 0 6px #b06a1066}
+  .pa.day .speaker{background:radial-gradient(circle,#c9bfa9 1.5px,#ded6c6 1.6px);border-color:#c9bfa9;box-shadow:inset 0 0 30px #00000014}
+  .pa.day .meter i{background:#cfc5b2}.pa.day .meter i.on{background:#b06a10;box-shadow:0 0 5px #b06a1044}
+  .pa.day .face{background:#e0d8c6;border-color:#c9bfa9}
+  .pa.day .face .btn{background:#d6cdb8;border-color:#bdb298;color:#5a5142}
+  .pa.day .face .btn.main{background:#b06a10;color:#fff;box-shadow:0 0 18px #b06a1033}
+  .pa.day .face .btn.favOn{color:#b06a10;border-color:#b06a10}
+  .pa.day .tune{background:#e0d8c6;border-color:#c9bfa9}
+  .pa.day .tune .tx b{color:#b06a10}
+  .pa.day .tune .p{color:#b06a10}
+  .pa.day .tune .grille{background:radial-gradient(circle,#b7ac94 1.5px,#d8cfba 1.6px);border-color:#b7ac94}
+  .pa.day .scanbox{border-color:#c9bfa9}
+  .pa.day .scanbox input{color:#b06a10}
+  .pa.day .scanbox input::placeholder{color:#a89d86}
+  .pa.day .preset.on{border-color:#b06a10;color:#b06a10;box-shadow:0 0 8px #b06a1022}
+
+  /* ══════ B · MUSEUM ══════ */
+  .pb{background:#fbfaf7;color:#171512}
+  .pb.dk{background:#161511;color:#ece9df}
+  .pb .pad{padding:20px;display:flex;flex-direction:column;height:100%}
+  .pb .pill{align-self:center;display:flex;border:1px solid #171512;border-radius:999px;overflow:hidden;margin-bottom:16px}
+  .pb.dk .pill{border-color:#ece9df}
+  .pb .pill b{padding:7px 15px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;cursor:pointer}
+  .pb .pill b.on{background:#171512;color:#fbfaf7}
+  .pb.dk .pill b.on{background:#ece9df;color:#161511}
+  .pb .poster{margin-bottom:14px;cursor:pointer}
+  .pb .art{height:128px;position:relative}
+  .pb .art .sig{position:absolute;right:8px;bottom:6px;font-size:9px;color:#ffffffcc;font-style:italic}
+  .pb .plate{border-left:2px solid #171512;padding:7px 0 7px 12px;margin-top:9px}
+  .pb.dk .plate{border-color:#ece9df}
+  .pb .plate b{font-family:Georgia,serif;font-size:15px;font-weight:600}
+  .pb .plate span{display:block;font-size:10px;color:#6e6a61;margin-top:3px;letter-spacing:.4px}
+  .pb.dk .plate span{color:#a8a396}
+  .pb .foot{margin-top:auto;border-top:1px solid #dcd8cd;padding-top:11px;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:#6e6a61;text-align:center}
+  .pb.dk .foot{border-color:#33312a;color:#a8a396}
+  .pb .person{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #dcd8cd;padding:13px 2px;cursor:pointer}
+  .pb.dk .person{border-color:#33312a}
+  .pb .person b{font-family:Georgia,serif;font-size:15px}
+  .pb .person span{font-size:10px;color:#6e6a61;letter-spacing:1px;text-transform:uppercase}
+  .pb.dk .person span{color:#a8a396}
+  .pb.npscr .back{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#6e6a61;margin-bottom:14px;cursor:pointer}
+  .pb.dk .back{color:#a8a396}
+  .pb .frame{padding:9px;border:1.5px solid #171512;background:#fff;cursor:pointer}
+  .pb.dk .frame{background:#1d1c17;border-color:#ece9df}
+  .pb .frame i{display:block;height:172px}
+  .pb .label{margin-top:15px}
+  .pb .label h2{font-family:Georgia,serif;font-size:20px;font-weight:600}
+  .pb .label .l{display:flex;justify-content:space-between;border-top:1px solid #dcd8cd;padding:6px 0;font-size:11px}
+  .pb.dk .label .l{border-color:#33312a}
+  .pb .label .l s{text-decoration:none;color:#6e6a61;letter-spacing:1px;text-transform:uppercase;font-size:9px}
+  .pb.dk .label .l s{color:#a8a396}
+  .pb .hair{height:2px;background:#dcd8cd;margin:14px 0 0;cursor:pointer;position:relative}
+  .pb.dk .hair{background:#33312a}
+  .pb .hair i{position:absolute;left:0;top:0;bottom:0;background:#171512}
+  .pb.dk .hair i{background:#ece9df}
+  .pb .ctrls{margin-top:auto;display:flex;justify-content:space-between;align-items:center;border-top:1.5px solid #171512;padding-top:14px;color:#171512}
+  .pb.dk .ctrls{border-color:#ece9df;color:#ece9df}
+  .pb .ctrls .play{width:50px;height:50px;border:1.5px solid #171512;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+  .pb.dk .ctrls .play{border-color:#ece9df}
+  .pb .ctrls .ic{font-size:15px;cursor:pointer}
+  .pb .ctrls .favOn{color:#c8432f}
+
+  /* ══════ C · TAPE DECK ══════ */
+  .pc{background:#e9e4da;color:#26221c}
+  .pc.night{background:#211e19;color:#e9e4da}
+  .pc .pad{padding:16px;display:flex;flex-direction:column;height:100%}
+  .pc .st{display:flex;justify-content:space-between;font-size:9px;color:#8d8574;margin-bottom:12px;font-weight:700;letter-spacing:1px}
+  .pc .hd{font-size:19px;font-weight:800;letter-spacing:-.4px;margin-bottom:2px}
+  .pc .hd em{font-style:normal;color:#e8622c}
+  .pc .sub{font-size:10.5px;color:#8d8574;margin-bottom:12px}
+  .pc .shelflab{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+  .pc .shelflab b{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase}
+  .pc .shelflab span{font-size:9.5px;color:#e8622c;font-weight:800;cursor:pointer}
+  .pc .shelf{display:flex;gap:7px;overflow-x:auto;padding-bottom:9px;border-bottom:3px solid #26221c;margin-bottom:13px;scrollbar-width:none}
+  .pc.night .shelf{border-color:#e9e4da}
+  .pc .shelf::-webkit-scrollbar{display:none}
+  .pc .spine{width:42px;height:104px;border-radius:5px 5px 3px 3px;position:relative;flex-shrink:0;display:flex;align-items:flex-end;padding:7px 5px;cursor:pointer;transition:transform .12s}
+  .pc .spine:active{transform:translateY(3px)}
+  .pc .spine s{writing-mode:vertical-rl;text-decoration:none;font-size:8.5px;font-weight:800;letter-spacing:.5px;color:#fff;white-space:nowrap;overflow:hidden}
+  .pc .spine::after{content:"";position:absolute;top:8px;left:6px;right:6px;height:9px;background:#ffffff33;border-radius:2px}
+  .pc .spine.on{outline:3px solid #e8622c;outline-offset:2px}
+  .pc .album{display:flex;gap:9px}
+  .pc .sleeve{width:86px;flex-shrink:0;cursor:pointer}
+  .pc .sleeve i{display:block;height:86px;border-radius:8px;position:relative;box-shadow:0 3px 8px #00000022}
+  .pc .sleeve s{text-decoration:none;display:block;font-size:9.5px;font-weight:700;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc .sleeve em{font-style:normal;display:block;font-size:8.5px;color:#8d8574}
+  .pc .transport{margin-top:auto;display:flex;justify-content:center;align-items:center;gap:16px;background:#ded8cb;border-radius:18px;padding:12px;border:1px solid #c9c2b2;box-shadow:inset 0 2px 6px #00000014}
+  .pc.night .transport{background:#2c2822;border-color:#3a352c}
+  .pc .tbtn{width:42px;height:42px;border-radius:50%;background:#26221c;color:#e9e4da;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;box-shadow:0 3px 0 #14110d;transition:transform .1s}
+  .pc .tbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #14110d}
+  .pc .tbtn.big{width:56px;height:56px;background:#e8622c;box-shadow:0 3px 0 #a83f14;font-size:17px}
+  .pc.np .deck{margin-top:4px;background:#26221c;border-radius:20px;padding:16px;color:#e9e4da}
+  .pc.night .deck{background:#171410;border:1px solid #3a352c}
+  .pc .win{background:#171410;border-radius:12px;padding:14px;display:flex;align-items:center;height:118px}
+  .pc .reel{width:62px;height:62px;border-radius:50%;border:7px solid #4a443a;background:radial-gradient(circle,#171410 31%,#e9e4da 32% 40%,#171410 41%);position:relative;flex-shrink:0}
+  .pc .reel::after{content:"";position:absolute;inset:13px;border-radius:50%;background:#171410;border:3px solid #6a6355}
+  .pc .tape{flex:1;height:10px;background:#3a352c;position:relative}
+  .pc .tape i{position:absolute;left:0;top:0;bottom:0;background:#e9e4da;opacity:.25;transition:width .5s}
+  .pc .vu{display:flex;gap:5px;margin-top:13px;cursor:pointer}
+  .pc .vu .seg{flex:1;height:12px;border-radius:3px;background:#3a352c}
+  .pc .vu .seg.on{background:#e8622c}
+  .pc .vu .seg.hot{background:#f5a623}
+  .pc .pocket{margin-top:13px;background:#f5f1e8;border-radius:12px;padding:11px 13px;color:#26221c;display:flex;justify-content:space-between;align-items:center;border:1px solid #d5cec0}
+  .pc.night .pocket{background:#24211b;border-color:#3a352c;color:#e9e4da}
+  .pc .pocket .tx b{font-size:14px;font-weight:800;display:block}
+  .pc .pocket .tx span{font-size:10px;color:#8d8574}
+  .pc .pocket .side{font-size:9px;font-weight:800;letter-spacing:1px;border:2px solid currentColor;border-radius:6px;padding:4px 7px}
+  .pc .keys{display:flex;justify-content:space-between;margin-top:13px}
+  .pc .keys b{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#8d8574;background:#ded8cb;border-radius:8px;padding:7px 9px;border:1px solid #c9c2b2;cursor:pointer}
+  .pc.night .keys b{background:#2c2822;border-color:#3a352c}
+  .pc .keys b.on{background:#e8622c;color:#fff;border-color:#e8622c}
+  .pc .backrow{display:flex;justify-content:space-between;font-size:9px;font-weight:800;letter-spacing:1px;color:#8d8574;margin-bottom:8px}
+  .pc .backrow span{cursor:pointer}
+
+  /* ══════ D · NIGHT JOURNAL ══════ */
+  .pd{background:#10141f;color:#eef0f6}
+  .pd.lite{background:#f4f4f0;color:#1a2030}
+  .pd .pad{padding:22px;display:flex;flex-direction:column;height:100%}
+  .pd .date{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#7c86a0;margin-bottom:8px}
+  .pd.lite .date{color:#8a90a5}
+  .pd .big{font-size:27px;font-weight:200;letter-spacing:-.5px;line-height:1.18;margin-bottom:20px}
+  .pd .big em{font-style:normal;font-weight:600}
+  .pd .entry{display:flex;gap:13px;padding:12px 0;border-top:1px solid #1e2433;cursor:pointer}
+  .pd.lite .entry{border-color:#e3e3da}
+  .pd .stamp{width:40px;flex-shrink:0;font-size:10px;color:#7c86a0;padding-top:4px}
+  .pd.lite .stamp{color:#8a90a5}
+  .pd .chip{width:34px;height:34px;border-radius:8px;flex-shrink:0}
+  .pd .tx{flex:1;min-width:0}
+  .pd .tx b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pd .tx span{font-size:10px;color:#7c86a0}
+  .pd.lite .tx span{color:#8a90a5}
+  .pd .hair{width:2px;border-radius:1px;background:#7fd1b9;align-self:stretch;margin:4px 2px}
+  .pd .now{border-top:1px solid #232a3c;margin-top:auto;padding-top:14px}
+  .pd.lite .now{border-color:#d5d5cc}
+  .pd .now .np{display:flex;gap:13px;align-items:center;cursor:pointer}
+  .pd .now .chip{width:44px;height:44px;border-radius:10px}
+  .pd .now .tx b{font-size:15px;font-weight:300;letter-spacing:.3px}
+  .pd .now .pl{width:44px;height:44px;border-radius:50%;border:1.5px solid #7fd1b9;color:#7fd1b9;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .pd .dots{display:flex;justify-content:center;gap:9px;margin-top:16px}
+  .pd .dots i{width:7px;height:7px;border-radius:50%;background:#2a3348;cursor:pointer}
+  .pd.lite .dots i{background:#c9c9be}
+  .pd .dots i.on{background:#7fd1b9}
+  .pd .shelf{display:flex;flex-direction:column}
+  .pd .srow{display:flex;gap:12px;align-items:center;padding:11px 0;border-top:1px solid #1e2433;cursor:pointer}
+  .pd.lite .srow{border-color:#e3e3da}
+  .pd .srow .chip{width:38px;height:38px;border-radius:9px}
+  .pd .srow b{font-size:13px;font-weight:500;flex:1}
+  .pd .srow span{font-size:9.5px;color:#7c86a0;letter-spacing:1px;text-transform:uppercase}
+  .pd.npscr .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .pd.npscr .chip{width:32px;height:32px;border-radius:8px}
+  .pd.npscr .time{font-size:10px;color:#7c86a0}
+  .pd.lite.npscr .time{color:#8a90a5}
+  .pd .vbar{position:absolute;right:12px;top:150px;bottom:130px;width:3px;border-radius:2px;background:#1e2433;cursor:pointer}
+  .pd.lite .vbar{background:#e3e3da}
+  .pd .vbar i{position:absolute;top:0;left:0;right:0;border-radius:2px;background:#7fd1b9}
+  .pd .hero{margin-top:22px;padding-right:26px}
+  .pd .hero h1{font-size:29px;font-weight:200;letter-spacing:-.6px;line-height:1.14}
+  .pd .hero p{font-size:12.5px;color:#7c86a0;margin-top:8px;font-weight:300}
+  .pd.lite .hero p{color:#8a90a5}
+  .pd .quote{margin-top:26px;font-size:12px;line-height:1.8;color:#aeb6cc;font-weight:300;border-left:2px solid #232a3c;padding-left:13px;max-width:210px}
+  .pd.lite .quote{color:#5d6478;border-color:#d5d5cc}
+  .pd .low{margin-top:auto;display:flex;justify-content:space-between;align-items:center;color:#eef0f6;padding:0 2px}
+  .pd.lite .low{color:#1a2030}
+  .pd .low .s{font-size:16px;opacity:.85;cursor:pointer}
+  .pd .low .s.favOn{opacity:1;color:#7fd1b9}
+  .pd .low .play{width:56px;height:56px;border-radius:50%;background:#7fd1b9;color:#10141f;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer}
+  .pd .dragzone{position:absolute;inset:0;z-index:5}
+
+  /* ══════ E · DUOTONE PLANES ══════ */
+  .pe{background:linear-gradient(165deg,#241a3d 0%,#3d1d54 45%,#1c1430 100%);color:#fff;transition:background 1s}
+  .pe .pad{padding:20px;display:flex;flex-direction:column;height:100%;position:relative}
+  .pe .st{display:flex;justify-content:space-between;font-size:10px;opacity:.7;margin-bottom:14px}
+  .pe .st span{cursor:pointer}
+  .pe .ghost{font-size:24px;font-weight:300;letter-spacing:-.4px;margin-bottom:16px}
+  .pe .ghost em{font-style:normal;font-weight:700;opacity:.55}
+  .pe .mosaic{display:grid;grid-template-columns:1fr 1fr;gap:11px;overflow-y:auto;scrollbar-width:none}
+  .pe .mosaic::-webkit-scrollbar{display:none}
+  .pe .tile{border-radius:16px;height:104px;position:relative;overflow:hidden;cursor:pointer}
+  .pe .tile i{position:absolute;inset:0}
+  .pe .tile.wide{grid-column:1/3;height:118px}
+  .pe .tile b{position:absolute;left:11px;bottom:9px;font-size:11.5px;font-weight:600;text-shadow:0 1px 6px #00000088}
+  .pe .tile span{position:absolute;left:11px;bottom:24px;font-size:8.5px;opacity:.75;letter-spacing:1px}
+  .pe .mini{position:absolute;left:16px;right:16px;bottom:82px;background:#ffffff1c;border:1px solid #ffffff2b;border-radius:16px;padding:9px 11px;display:flex;gap:10px;align-items:center;backdrop-filter:blur(8px);cursor:pointer}
+  .pe .mini .a{width:34px;height:34px;border-radius:10px;flex-shrink:0}
+  .pe .mini .tx{flex:1;min-width:0}
+  .pe .mini .tx b{display:block;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pe .mini .tx span{font-size:9px;opacity:.7}
+  .pe .mini .pp{width:30px;height:30px;border-radius:50%;background:#ffffff2b;display:flex;align-items:center;justify-content:center;font-size:11px}
+  .pe .dock{margin-top:auto;align-self:center;display:flex;align-items:center;gap:7px;background:#ffffff1f;border:1px solid #ffffff2e;border-radius:999px;padding:7px;backdrop-filter:blur(8px)}
+  .pe .dock .d{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;cursor:pointer}
+  .pe .dock .d.big{width:52px;height:52px;background:#fff;color:#3d1d54;font-size:17px}
+  .pe .over{position:absolute;inset:0;background:#170f24f2;padding:18px;display:flex;flex-direction:column;z-index:10}
+  .pe .over .oh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:700}
+  .pe .over .oh span{cursor:pointer;opacity:.7;font-weight:400;font-size:11px}
+  .pe .orow{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid #ffffff14;cursor:pointer;align-items:center}
+  .pe .orow .a{width:36px;height:36px;border-radius:10px;flex-shrink:0}
+  .pe .orow .tx{flex:1;min-width:0}
+  .pe .orow .tx b{display:block;font-size:12.5px;font-weight:600}
+  .pe .orow .tx span{font-size:9.5px;opacity:.65}
+  .pe .orow.on b{color:#ff8ad4}
+  .pe .orow .qi{font-size:10px;opacity:.6;width:16px}
+  .pe.npscr{background:linear-gradient(170deg,#3d1d54 0%,#241a3d 50%,#191228 100%)}
+  .pe .ring{position:relative;width:218px;height:218px;margin:22px auto 0}
+  .pe .ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#ff8ad4 calc(var(--p,0)*1%),#ffffff22 0);-webkit-mask:radial-gradient(circle,transparent 71%,#000 71.5%);mask:radial-gradient(circle,transparent 71%,#000 71.5%);cursor:pointer}
+  .pe .ring .cov{position:absolute;inset:22px;border-radius:50%;overflow:hidden;box-shadow:0 16px 50px #00000066}
+  .pe .ring .cov i{position:absolute;inset:0}
+  .pe .tt{margin-top:22px;display:flex;justify-content:space-between;align-items:flex-start}
+  .pe .tt h2{font-size:21px;font-weight:700;letter-spacing:-.3px}
+  .pe .tt p{font-size:11.5px;opacity:.7;margin-top:4px}
+  .pe .tt .fav{width:38px;height:38px;border-radius:50%;background:#ffffff1c;border:1px solid #ffffff2b;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer}
+  .pe .tt .fav.favOn{color:#ff8ad4;border-color:#ff8ad4}
+  .pe .time{display:flex;justify-content:space-between;font-size:9px;opacity:.6;margin-top:14px}
+  .pe .low{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding:0 6px}
+  .pe .low .ic{font-size:15px;opacity:.85;cursor:pointer}
+  .pe .low .play{width:58px;height:58px;border-radius:22px;background:#fff;color:#3d1d54;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 10px 30px #00000055}
+  .pe .backrow{display:flex;justify-content:space-between;font-size:10px;opacity:.7;margin-bottom:4px}
+  .pe .backrow span{cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>Timbre — interactive prototypes</h1>
+  <p class="sub">All five directions are now <b>living apps</b> sharing one simulated player: play, pause, skip, seek, favorite, tune, swipe, open queues — everything responds. Feel each one, then pick below (or describe a mix).</p>
+</header>
+
+<div class="cards" id="cards">
+
+  <!-- ══════ A · BROADCAST ══════ -->
+  <div class="card" data-design="A">
+    <div class="meta">
+      <span class="badge">Designer A</span>
+      <div class="name">Broadcast</div>
+      <div class="tagline">Your music as a station you tune</div>
+      <p class="desc">The app is a radio receiver. Home is a program guide of your listening day; you tune between stations (Archive / Flow Queue / Favorites) with a working dial; Now Playing is the faceplate — giant frequency clock, glowing speaker grille, VU-meter progress.</p>
+      <div class="try"><b>Try:</b> tune the dial · ⌕ opens the Scanner (search) · ARCHIVE lists every track · P1–P3 memory presets = your playlists · ⚙ service menu: day/night faceplate, tape speed, sleep timer · tap the tuner bar for the receiver · VU segments seek · ☰ queue.</div>
+      <button onclick="pick(this,'A')">Choose Broadcast</button>
+      <div class="picked-label">✓ Broadcast chosen — confirm in chat</div>
+    </div>
+    <div class="phone pa" id="phA">
+      <!-- GUIDE -->
+      <div class="scr" data-scr="guide">
+        <div class="pad">
+          <div class="st"><span>TUE 20 SEP</span><span class="tap" data-act="a-archive">ARCHIVE</span><span class="tap" data-act="a-search">⌕</span><span class="tap" data-act="a-settings">⚙</span><span data-clock>21:14</span></div>
+          <div class="wm">TIMBRE <b>FM</b></div>
+          <div class="dial" id="aDial"></div>
+          <div class="freq" id="aFreq">98.4</div>
+          <div class="flabel" id="aFlabel">FLOW QUEUE · TUNED</div>
+          <div class="presets">
+            <div class="preset tap on" data-act="preset" data-arg="0">P1</div>
+            <div class="preset tap" data-act="preset" data-arg="1">P2</div>
+            <div class="preset tap" data-act="preset" data-arg="2">P3</div>
+            <div class="preset tap" data-act="preset" data-arg="new">+ P4</div>
+          </div>
+          <div class="plabel" id="aPLabel">MEMORY P1 · FLOW QUEUE</div>
+          <div class="guide">PROGRAM GUIDE</div>
+          <div id="aGuide"></div>
+          <div class="tune tap" data-act="a-open">
+            <div class="grille"></div>
+            <div class="tx"><b data-a-tune>NIGHT DRIVE</b><span data-a-tunetime>0:12 / 0:30</span></div>
+            <div class="p" id="aTuneIc">&#9654;</div>
+          </div>
+        </div>
+      </div>
+      <!-- RECEIVER -->
+      <div class="scr npscr hid" data-scr="now">
+        <div class="pad">
+          <div class="navrow"><span data-act="a-guide">◀ BACK</span><span>RECEIVER</span><span data-act="a-queue">☰</span></div>
+          <div class="freq2" data-clock>21:14</div>
+          <div class="sub2" data-a-sub>NIGHT DRIVE — UNKNOWN ARTIST</div>
+          <div class="speaker"></div>
+          <div class="meter" id="aMeter"></div>
+          <div class="face">
+            <div class="btn tap" data-act="prev">⏮</div>
+            <div class="btn main tap" data-act="toggle">▶</div>
+            <div class="btn tap" data-act="next">⏭</div>
+            <div class="btn tap" data-act="fav" data-fav="a"><span data-a-fav>♡</span></div>
+            <div class="btn tap" data-act="a-queue">☰</div>
+          </div>
+        </div>
+      </div>
+      <!-- QUEUE -->
+      <div class="scr hid" data-scr="queue">
+        <div class="pad">
+          <div class="navrow"><span data-act="a-open">◀ RECEIVER</span><span>ON AIR NEXT</span><span></span></div>
+          <div class="guide">TRANSMISSION QUEUE</div>
+          <div id="aQueue"></div>
+        </div>
+      </div>
+      <!-- ARCHIVE -->
+      <div class="scr hid" data-scr="archive">
+        <div class="pad">
+          <div class="navrow"><span data-act="a-guide">◀ BACK</span><span>THE ARCHIVE</span><span data-act="a-search">⌕</span></div>
+          <div class="guide">ALL TRANSMISSIONS</div>
+          <div id="aArchive"></div>
+        </div>
+      </div>
+      <!-- SEARCH / SCANNER -->
+      <div class="scr hid" data-scr="search">
+        <div class="pad">
+          <div class="navrow"><span data-act="a-guide">◀ BACK</span><span>SCANNER</span><span></span></div>
+          <div class="scanbox"><input id="aSearchIn" placeholder="Scan the archive…" autocomplete="off"></div>
+          <div class="guide" id="aSearchCount">ALL TRANSMISSIONS</div>
+          <div id="aSearchRes"></div>
+        </div>
+      </div>
+      <!-- SETTINGS / SERVICE MENU -->
+      <div class="scr hid" data-scr="settings">
+        <div class="pad">
+          <div class="navrow"><span data-act="a-guide">◀ BACK</span><span>SERVICE MENU</span><span></span></div>
+          <div class="guide">FACEPLATE</div>
+          <div class="prog tap" data-act="a-face"><div class="t">01</div><div class="n">Day / night faceplate<em id="aFaceVal">Night</em></div></div>
+          <div class="guide">PLAYBACK</div>
+          <div class="prog tap" data-act="a-speed"><div class="t">02</div><div class="n">Tape speed<em id="aSpeedVal">1×</em></div></div>
+          <div class="prog tap" data-act="a-sleep"><div class="t">03</div><div class="n">Sleep timer<em id="aSleepVal">Off</em></div></div>
+          <div class="prog tap" data-act="a-shuffle"><div class="t">04</div><div class="n">Shuffle<em id="aShufVal">Off</em></div></div>
+          <div class="prog tap" data-act="a-repeat"><div class="t">05</div><div class="n">Repeat<em id="aRepVal">Off</em></div></div>
+          <div class="guide">ABOUT</div>
+          <div class="prog"><div class="t">—</div><div class="n">Timbre FM<em>Your files · your frequency · no account, no tracking</em></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ B · MUSEUM ══════ -->
+  <div class="card" data-design="B">
+    <div class="meta">
+      <span class="badge">Designer B</span>
+      <div class="name">Museum</div>
+      <div class="tagline">Your library as a gallery of works</div>
+      <p class="desc">Every album is an exhibit. Poster feed with caption plates, serif wall-label typography, hairline rules, generous paper whitespace. A single segmented pill navigates (Music / People / Words) — no bottom bar. Now Playing hangs the work in a frame with a museum label.</p>
+      <div class="try"><b>Try:</b> switch the pill between Music / People / Words · tap a poster to hang it in the frame · tap the label progress hairline to seek · ☀ toggle (top-right of player) for the evening gallery.</div>
+      <button onclick="pick(this,'B')">Choose Museum</button>
+      <div class="picked-label">✓ Museum chosen — confirm in chat</div>
+    </div>
+    <div class="phone pb" id="phB">
+      <!-- GALLERY -->
+      <div class="scr" data-scr="gal">
+        <div class="pad">
+          <div class="pill">
+            <b class="on" data-act="b-pill" data-arg="music">Music</b>
+            <b data-act="b-pill" data-arg="people">People</b>
+            <b data-act="b-pill" data-arg="words">Words</b>
+          </div>
+          <div id="bFeed"></div>
+          <div class="foot">Timbre — permanent collection</div>
+        </div>
+      </div>
+      <!-- NOW ON VIEW -->
+      <div class="scr npscr hid" data-scr="now">
+        <div class="pad">
+          <div class="back" data-act="b-gal">▾ Now on view</div>
+          <div class="frame tap" data-act="seek-half"><i id="bArt" class="g1"></i></div>
+          <div class="label">
+            <h2 data-b-title>Night Drive</h2>
+            <div style="height:7px"></div>
+            <div class="l"><s>Artist</s><span data-b-artist>Unknown artist</span></div>
+            <div class="l"><s>Album</s><span data-b-album>Night Drive — Single</span></div>
+            <div class="l"><s>Duration</s><span data-b-dur>0:30</span></div>
+            <div class="l"><s>Status</s><span data-b-status>0:12 elapsed · playing</span></div>
+          </div>
+          <div class="hair" data-act="b-seek" id="bHair"><i style="width:40%"></i></div>
+          <div class="ctrls">
+            <span class="ic tap" data-act="prev">⏮</span>
+            <span class="ic tap" data-act="b-repeat" id="bRep">↺</span>
+            <div class="play tap" data-act="toggle">▶</div>
+            <span class="ic tap" data-act="fav" data-fav="b"><span data-b-fav>♡</span></span>
+            <span class="ic tap" data-act="next">⏭</span>
+          </div>
+          <div style="height:10px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ C · TAPE DECK ══════ -->
+  <div class="card" data-design="C">
+    <div class="meta">
+      <span class="badge">Designer C</span>
+      <div class="name">Tape Deck</div>
+      <div class="tagline">Your music on shelves, played on a deck</div>
+      <p class="desc">Tactile hardware, modernized. Home shelves hold cassette spines (playlists &amp; Flow) to flick sideways and record sleeves below. A physical transport bar lives at the bottom of every screen. Now Playing is the deck: cassette window, VU-meter progress, label pocket, A/B keys.</p>
+      <div class="try"><b>Try:</b> tap a cassette spine (FLOW QUEUE builds a fresh mix) · tap a record sleeve · on the deck, click VU segments to seek · flip SHUF/RPT keys · ☀ key for night deck.</div>
+      <button onclick="pick(this,'C')">Choose Tape Deck</button>
+      <div class="picked-label">✓ Tape Deck chosen — confirm in chat</div>
+    </div>
+    <div class="phone pc" id="phC">
+      <!-- SHELVES -->
+      <div class="scr" data-scr="shelf">
+        <div class="pad">
+          <div class="st"><span>TIMBRE</span><span>DECK-01</span></div>
+          <div class="hd">Good evening<em>.</em></div>
+          <div class="sub">5 tapes loaded · 6 records on the shelf</div>
+          <div class="shelflab"><b>Your tapes</b><span data-act="c-shelves">SEE ALL</span></div>
+          <div class="shelf" id="cShelf"></div>
+          <div class="shelflab"><b>Records</b><span data-act="c-shelves">SHELF 1 OF 2</span></div>
+          <div class="album" id="cAlbum"></div>
+          <div class="transport">
+            <div class="tbtn tap" data-act="prev">⏮</div>
+            <div class="tbtn big tap" data-act="toggle">▶</div>
+            <div class="tbtn tap" data-act="next">⏭</div>
+          </div>
+        </div>
+      </div>
+      <!-- DECK -->
+      <div class="scr np hid" data-scr="now">
+        <div class="pad">
+          <div class="backrow"><span data-act="c-shelf">◀ EJECT</span><span data-c-state>PLAYING · SIDE A</span><span data-act="c-queue">QUEUE ▶</span></div>
+          <div class="deck">
+            <div class="win">
+              <div class="reel" id="cReelL"></div>
+              <div class="tape"><i id="cTape" style="width:40%"></i></div>
+              <div class="reel" id="cReelR"></div>
+            </div>
+            <div class="vu" id="cVU"></div>
+            <div class="pocket">
+              <div class="tx"><b data-c-title>Night Drive</b><span data-c-time>Unknown artist · 0:12 / 0:30</span></div>
+              <div class="side" data-act="c-side">A</div>
+            </div>
+            <div class="keys">
+              <b data-act="key" data-arg="shuffle" id="kShuf">SHUF A</b>
+              <b data-act="key" data-arg="repeat" id="kRpt">RPT B</b>
+              <b data-act="c-speed">SPEED</b>
+              <b data-act="c-theme">☀</b>
+            </div>
+          </div>
+          <div class="transport" style="margin-top:14px">
+            <div class="tbtn tap" data-act="prev">⏮</div>
+            <div class="tbtn big tap" data-act="toggle">⏸</div>
+            <div class="tbtn tap" data-act="next">⏭</div>
+          </div>
+        </div>
+      </div>
+      <!-- QUEUE -->
+      <div class="scr hid" data-scr="queue">
+        <div class="pad">
+          <div class="backrow"><span data-act="c-now">◀ DECK</span><span>UP NEXT ON THIS TAPE</span><span></span></div>
+          <div id="cQueue"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ D · NIGHT JOURNAL ══════ -->
+  <div class="card" data-design="D">
+    <div class="meta">
+      <span class="badge">Designer D</span>
+      <div class="name">Night Journal</div>
+      <div class="tagline">A quiet diary of everything you've heard</div>
+      <p class="desc">Built around memory. A journal timeline with big quiet timestamps, three swipe planes (Listen / Browse / Now), dots instead of tabs. Now Playing is typography-first: an ultra-light hero, a slim vertical progress line at the screen edge, controls in the corners.</p>
+      <div class="try"><b>Try:</b> drag the phone horizontally (or click the dots) to move between planes · tap any journal entry or browse row to play · click the vertical line to seek · ☾-dot toggle in the top corner for the paper edition.</div>
+      <button onclick="pick(this,'D')">Choose Night Journal</button>
+      <div class="picked-label">✓ Night Journal chosen — confirm in chat</div>
+    </div>
+    <div class="phone pd" id="phD">
+      <div class="scr" data-scr="p0">
+        <div class="pad">
+          <div class="date" style="display:flex;justify-content:space-between"><span>Tuesday · September 20</span><span data-act="d-theme" style="cursor:pointer">☾</span></div>
+          <div class="big">You listened to <em>3 tracks</em><br>tonight.</div>
+          <div id="dJournal"></div>
+          <div class="now">
+            <div class="np" data-act="d-now">
+              <div class="chip g1" id="dNowChip"></div>
+              <div class="tx"><b data-d-now>Night Drive</b><span data-d-nowtime>0:12 / 0:30</span></div>
+              <div class="pl tap" data-act="toggle">▶</div>
+            </div>
+            <div class="dots">
+              <i class="on" data-act="d-plane" data-arg="0"></i>
+              <i data-act="d-plane" data-arg="1"></i>
+              <i data-act="d-plane" data-arg="2"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scr hid" data-scr="p1">
+        <div class="pad">
+          <div class="date">Browse — the whole collection</div>
+          <div class="shelf" id="dBrowse"></div>
+          <div class="now">
+            <div class="np" data-act="d-now">
+              <div class="chip g1" id="dNowChip2"></div>
+              <div class="tx"><b data-d-now>Night Drive</b><span data-d-nowtime>0:12 / 0:30</span></div>
+              <div class="pl tap" data-act="toggle">▶</div>
+            </div>
+            <div class="dots">
+              <i data-act="d-plane" data-arg="0"></i>
+              <i class="on" data-act="d-plane" data-arg="1"></i>
+              <i data-act="d-plane" data-arg="2"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scr npscr hid" data-scr="p2">
+        <div class="pad">
+          <div class="top"><div class="chip" id="dArt"></div><div class="time" data-d-context>21:14 · FLOW</div></div>
+          <div class="vbar" data-act="d-seek" id="dVbar"><i style="height:40%"></i></div>
+          <div class="hero"><h1 data-d-h1>Night<br>Drive</h1><p data-d-artist>Unknown artist</p></div>
+          <div class="quote" data-d-quote>City lights blur past the window —<br>the road hums in a minor key.</div>
+          <div class="low">
+            <span class="s tap" data-act="prev">⏮</span>
+            <span class="s tap" data-act="key" data-arg="shuffle">↺</span>
+            <div class="play tap" data-act="toggle">▶</div>
+            <span class="s tap" data-act="fav" data-fav="d"><span data-d-fav>♡</span></span>
+            <span class="s tap" data-act="next">⏭</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ E · DUOTONE PLANES ══════ -->
+  <div class="card" data-design="E">
+    <div class="meta">
+      <span class="badge">Designer E</span>
+      <div class="name">Duotone Planes</div>
+      <div class="tagline">Fullscreen color, zero chrome, gesture-first</div>
+      <p class="desc">The app <b>is</b> the artwork: everything floats over a duotone gradient tinted by what's playing, chrome reduced to one floating glass dock. Home is a full-bleed mosaic; Now Playing centers the artwork inside a radial progress ring you can tap to seek. Queues and library slide over as planes.</p>
+      <div class="try"><b>Try:</b> tap mosaic tiles · open ☰ (library) or ≡ (queue) planes from the dock · tap the mini player for Now Playing · tap around the ring to seek · watch the room re-tint with each track.</div>
+      <button onclick="pick(this,'E')">Choose Duotone Planes</button>
+      <div class="picked-label">✓ Duotone Planes chosen — confirm in chat</div>
+    </div>
+    <div class="phone pe" id="phE">
+      <!-- HOME -->
+      <div class="scr" data-scr="home">
+        <div class="pad">
+          <div class="st"><span data-act="e-lib">⌕</span><span>TIMBRE</span><span data-act="e-set">☰</span></div>
+          <div class="ghost">Library <em data-e-count>/ 6 tracks</em></div>
+          <div class="mosaic" id="eMosaic"></div>
+          <div class="mini" data-act="e-now">
+            <div class="a g1" id="eMiniArt"></div>
+            <div class="tx"><b data-e-mini>Night Drive</b><span data-e-minitime>0:12 / 0:30</span></div>
+            <div class="pp tap" data-act="toggle">⏸</div>
+          </div>
+          <div class="dock">
+            <div class="d tap" data-act="e-lib">☰</div>
+            <div class="d big tap" data-act="e-now">▶</div>
+            <div class="d tap" data-act="e-queue">≡</div>
+          </div>
+        </div>
+      </div>
+      <!-- NOW -->
+      <div class="scr npscr hid" data-scr="now">
+        <div class="pad">
+          <div class="backrow"><span data-act="e-home">▾</span><span data-e-context>FROM LIBRARY</span><span data-act="e-queue">≡</span></div>
+          <div class="ring" id="eRing" style="--p:40">
+            <div class="cov"><i id="eArt" class="g1"></i></div>
+          </div>
+          <div class="tt">
+            <div><h2 data-e-title>Night Drive</h2><p data-e-artist>Unknown artist</p></div>
+            <div class="fav tap" data-act="fav" data-fav="e"><span data-e-fav>♡</span></div>
+          </div>
+          <div class="time"><span data-e-t1>0:12</span><span data-e-pct>40%</span><span data-e-t2>0:30</span></div>
+          <div class="low">
+            <span class="ic tap" data-act="key" data-arg="shuffle">⇄</span>
+            <span class="ic tap" data-act="prev">⏮</span>
+            <div class="play tap" data-act="toggle">▶</div>
+            <span class="ic tap" data-act="next">⏭</span>
+            <span class="ic tap" data-act="e-sleep">🕐</span>
+          </div>
+        </div>
+      </div>
+      <!-- LIBRARY OVERLAY -->
+      <div class="scr hid" data-scr="lib">
+        <div class="over">
+          <div class="oh">All tracks <span data-act="e-home">close ✕</span></div>
+          <div id="eLib"></div>
+        </div>
+      </div>
+      <!-- QUEUE OVERLAY -->
+      <div class="scr hid" data-scr="queue">
+        <div class="over">
+          <div class="oh">Up next <span data-act="e-home">close ✕</span></div>
+          <div id="eQueue"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bar">
+  <button class="sw" data-act="jump" data-arg="A">A</button>
+  <button class="sw" data-act="jump" data-arg="B">B</button>
+  <button class="sw" data-act="jump" data-arg="C">C</button>
+  <button class="sw" data-act="jump" data-arg="D">D</button>
+  <button class="sw" data-act="jump" data-arg="E">E</button>
+  <button class="rst" data-act="reset">Reset demo</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* engraved line icons — no emoji glyphs */
+const IC={
+  play:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10-6.5z"/></svg>',
+  pause:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 5.5v13M15 5.5v13"/></svg>',
+  next:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5.5v13l8-6.5z"/><path d="M18 5.5v13"/></svg>',
+  prev:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5.5v13l-8-6.5z"/><path d="M6 5.5v13"/></svg>',
+  heart:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19s-6.5-4.1-6.5-8.7C5.5 7.5 7.4 6 9.3 6c1.1 0 2.1.5 2.7 1.4C12.6 6.5 13.6 6 14.7 6c1.9 0 3.8 1.5 3.8 4.3C18.5 14.9 12 19 12 19z"/></svg>',
+  heartFull:'<svg class="gi" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6"><path d="M12 19s-6.5-4.1-6.5-8.7C5.5 7.5 7.4 6 9.3 6c1.1 0 2.1.5 2.7 1.4C12.6 6.5 13.6 6 14.7 6c1.9 0 3.6 1.5 3.8 4.3C18.5 14.9 12 19 12 19z"/></svg>',
+  queue:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>',
+  gear:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 4v2.5M12 17.5V20M4 12h2.5M17.5 12H20M6.3 6.3l1.8 1.8M15.9 15.9l1.8 1.8M17.7 6.3l-1.8 1.8M8.1 15.9l-1.8 1.8"/></svg>',
+  search:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg>',
+  moon:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>',
+  moonFull:'<svg class="gi" viewBox="0 0 24 24" fill="currentColor"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>',
+  sun:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>',
+  clock:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></svg>',
+  wave:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 12h2l2-5 3 10 3-13 3 11 2-3h1"/></svg>',
+  star:'<svg class="gi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l2.2 4.9 5.3.5-4 3.6 1.2 5.2-4.7-2.8-4.7 2.8 1.2-5.2-4-3.6 5.3-.5z"/></svg>',
+};
+const SONGS=[
+  {t:'Night Drive',a:'Unknown artist',d:30,g:'g1',al:"Night Drive — Single"},
+  {t:'Morning Light',a:'Unknown artist',d:32,g:'g3',al:"Morning Light — Single"},
+  {t:'Slow Wave',a:'Unknown artist',d:28,g:'g4',al:"Slow Wave — Single"},
+  {t:'Golden Hour',a:'Unknown artist',d:26,g:'g5',al:"Golden Hour — Single"},
+  {t:'Deep Focus',a:'Unknown artist',d:34,g:'g6',al:"Deep Focus — Single"},
+  {t:'City Rain',a:'Unknown artist',d:29,g:'g2',al:"City Rain — Single"},
+];
+const flowOrder=()=>[0,2,4,1,3,5];
+const STATIONS=[{f:'89.1',l:'ARCHIVE',list:[0,1,2,3,4,5]},{f:'98.4',l:'FLOW QUEUE',list:flowOrder()},{f:'104.7',l:'FAVORITES',list:[0,2]}];
+const S={ list:flowOrder(), idx:0, pos:12, playing:true, favs:{0:true,2:true}, shuffle:false, repeat:false,
+  cur(){ return SONGS[this.list[this.idx]]; },
+  frac(){ return Math.min(1,this.pos/this.cur().d); },
+  song(i){ return SONGS[i]; } };
+const fmt=s=>{ s=Math.round(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+const clock=()=>{ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+function play(i,shuffle){ if(shuffle){S.list=shuffleOrder(i);} else {S.list=flowOrder(); S.idx=Math.max(0,flowOrder().indexOf(i)); if(S.idx<0)S.idx=0;} if(shuffle===undefined){} S.pos=0; S.playing=true; after('engine'); }
+function playIdx(i){ S.list=flowOrder(); S.idx=Math.max(0,S.list.indexOf(i)); S.pos=0; S.playing=true; after('engine'); }
+function shuffleOrder(first){ const rest=flowOrder().filter(x=>x!==first); for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];} return [first,...rest]; }
+function next(){ if(S.shuffle){ const nxt=shuffleOrder(S.cur()===undefined?0:S.list[S.idx]); const curSong=S.list[S.idx]; S.list=shuffleOrder(curSong); S.idx=0; } else { S.idx=(S.idx+1)%S.list.length; } S.pos=0; }
+function prev(){ if(S.pos>3){S.pos=0;return;} S.idx=(S.idx-1+S.list.length)%S.list.length; S.pos=0; }
+function seek(f){ S.pos=Math.max(0,Math.min(1,f))*S.cur().d; }
+function toggle(){ S.playing=!S.playing; }
+
+/* toast */
+let toastT;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
+
+/* per-design UI state */
+const UI={ A:{scr:'guide',station:1,face:'night',speed:1,sleep:0,preset:0}, B:{scr:'gal',pill:'music',dk:false,rep:false}, C:{scr:'shelf',night:false,side:'A'}, D:{plane:0,lite:false}, E:{scr:'home'} };
+
+/* ───────── renderers ───────── */
+function el(id){ return document.getElementById(id); }
+function scr(p,name){ document.querySelectorAll('#ph'+p+' .scr').forEach(s=>s.classList.toggle('hid',s.dataset.scr!==name)); }
+
+/* A */
+function buildA(){
+  const dial=el('aDial'); dial.innerHTML='';
+  STATIONS.forEach((st,i)=>{ const x=8+i*42; dial.innerHTML+=`<div class="stn ${i===UI.A.station?'on':''}" style="left:${x}%"><i>${st.f}</i></div><div class="stn tap" data-act="tune" data-arg="${i}" style="left:${x-12}%"></div>`; });
+  dial.innerHTML+='<div class="dial .track" style="position:absolute;left:0;right:0;bottom:18px;height:2px;background:#3a3426"></div><div class="stn" style="left:6%;bottom:10px"></div><div class="stn" style="left:96%;bottom:10px"></div>';
+  const g=el('aGuide'); const hist=[{h:'09:12',i:1},{h:'14:40',i:2}];
+  g.innerHTML=hist.map(x=>`<div class="prog"><div class="t">${x.h}</div><div class="n">${SONGS[x.i].t}<em>${SONGS[x.i].a}</em></div></div>`).join('')
+    +`<div class="prog live tap" data-act="a-open"><div class="t">NOW</div><div class="n"><span class="dot"></span>${S.cur().t}<em>${S.cur().a} · on air — tap to open receiver</em></div></div>`;
+  buildAArchive();
+}
+function buildAArchive(){
+  const arc=el('aArchive'); if(!arc) return;
+  arc.innerHTML=SONGS.map((s,i)=>`<div class="prog tap" data-act="a-play" data-arg="${i}"><div class="t">${String(i+1).padStart(2,'0')}</div><div class="n">${s.t}<em>${s.a} · ${fmt(s.d)}</em></div></div>`).join('');
+}
+function renderASearch(){
+  const inp=el('aSearchIn'); if(!inp) return;
+  const q=inp.value.trim().toLowerCase();
+  const hits=SONGS.map((s,i)=>({s,i})).filter(x=>!q||x.s.t.toLowerCase().includes(q)||x.s.a.toLowerCase().includes(q));
+  el('aSearchCount').textContent=q?hits.length+' TRANSMISSIONS FOUND':'ALL TRANSMISSIONS';
+  el('aSearchRes').innerHTML=hits.length?hits.map(x=>`<div class="prog tap" data-act="a-play" data-arg="${x.i}"><div class="t">${String(x.i+1).padStart(2,'0')}</div><div class="n">${x.s.t}<em>${x.s.a} · ${fmt(x.s.d)}</em></div></div>`).join('')
+    :`<div class="prog"><div class="t">—</div><div class="n">Static…<em>nothing on this frequency — try another word</em></div></div>`;
+}
+function buildAQueue(){ el('aQueue').innerHTML=S.list.map((si,i)=>`<div class="qrow ${i===S.idx?'on':''}"><div class="qi">${i===S.idx?'&#9654;':String(i+1).padStart(2,'0')}</div><div class="n">${SONGS[si].t}</div><div class="d">${fmt(SONGS[si].d)}</div></div>`).join(''); }
+const PRESETS=[{key:'P1',st:1,name:'FLOW QUEUE'},{key:'P2',st:2,name:'FAVORITES'},{key:'P3',st:0,name:'THE ARCHIVE'}];
+function updateA(){
+  const st=STATIONS[UI.A.station];
+  el('aFreq').textContent=st.f;
+  el('aFlabel').textContent=st.l+' · TUNED';
+  const c=S.cur();
+  el('aMeter').innerHTML=Array.from({length:20},(_,i)=>`<i class="${(i+0.5)/20<=S.frac()?'on':''}"></i>`).join('');
+  document.querySelectorAll('[data-a-tune]').forEach(n=>n.textContent=c.t.toUpperCase());
+  document.querySelectorAll('[data-a-tunetime]').forEach(n=>n.textContent=fmt(S.pos)+' / '+fmt(c.d));
+  document.querySelectorAll('[data-a-sub]').forEach(n=>n.textContent=c.t.toUpperCase()+' — '+c.a.toUpperCase());
+  document.querySelectorAll('[data-a-fav]').forEach(n=>n.innerHTML=S.favs[SONGS.indexOf(c)]?IC.heartFull:IC.heart);
+  const main=document.querySelector('#phA .main'); if(main) main.innerHTML=S.playing?IC.pause:IC.play;
+  document.querySelectorAll('#phA [data-act="prev"] .gi, #phA [data-act="prev"]').forEach(()=>{});
+  document.querySelectorAll('#phA [data-act="prev"]').forEach(n=>{if(!n.querySelector('.gi'))n.innerHTML=IC.prev;});
+  document.querySelectorAll('#phA [data-act="next"]').forEach(n=>{if(!n.querySelector('.gi'))n.innerHTML=IC.next;});
+  document.querySelectorAll('#phA [data-act="a-queue"]').forEach(n=>{if(!n.querySelector('.gi'))n.innerHTML=IC.queue;});
+  document.querySelectorAll('#phA [data-act="a-search"]').forEach(n=>{if(!n.querySelector('.gi'))n.innerHTML=IC.search;});
+  document.querySelectorAll('#phA [data-act="a-settings"]').forEach(n=>{if(!n.querySelector('.gi'))n.innerHTML=IC.gear;});
+  document.querySelectorAll('#phA [data-act="a-archive"]').forEach(n=>{if(n.dataset.txt===undefined){n.dataset.txt=n.textContent;n.textContent='';n.insertAdjacentHTML('beforeend',IC.queue);}});
+  document.querySelectorAll('.preset').forEach((p,i)=>{ const on=(p.dataset.arg==='new'? false : +p.dataset.arg===UI.A.preset); p.classList.toggle('on',on); });
+  const pr=PRESETS[UI.A.preset]||PRESETS[0];
+  el('aPLabel').textContent='MEMORY '+pr.key+' · '+st.l;
+  el('aFaceVal').textContent=UI.A.face==='day'?'Day':'Night';
+  el('aSpeedVal').textContent=(UI.A.speed===1?'1':UI.A.speed)+'×';
+  el('aSleepVal').textContent=UI.A.sleep?UI.A.sleep+' min':'Off';
+  el('aShufVal').textContent=S.shuffle?'On':'Off';
+  el('aRepVal').textContent=S.repeat?'On':'Off';
+  el('phA').classList.toggle('day',UI.A.face==='day');
+  buildAQueue();
+  const ti=el('aTuneIc'); if(ti) ti.innerHTML=IC.play;
+  document.querySelectorAll('#aQueue .qi').forEach(q=>{ if(q.textContent.trim()==='\u25B6'){ q.innerHTML=IC.play; } });
+}
+
+/* B */
+function buildB(){
+  const f=el('bFeed');
+  if(UI.B.pill==='music'){
+    f.innerHTML=[0,1,2].map(i=>`<div class="poster" data-act="b-play" data-arg="${i}"><div class="art"><i class="${SONGS[i].g}"></i><span class="sig">${SONGS[i].t.toLowerCase()} — ${fmt(SONGS[i].d)}</span></div><div class="plate"><b>${SONGS[i].t}</b><span>${SONGS[i].a} · single · ${fmt(SONGS[i].d)}</span></div></div>`).join('');
+  }else if(UI.B.pill==='people'){
+    f.innerHTML=`<div class="person" data-act="b-pill" data-arg="music"><b>Unknown artist</b><span>6 works</span></div><div class="person" data-act="toast" data-arg="One artist in the collection"><b>Various</b><span>compilation</span></div>`;
+  }else{
+    f.innerHTML=`<div class="person" data-act="toast" data-arg="Flow Queue — endless mix"><b>Flow Queue</b><span>endless mix</span></div><div class="person" data-act="toast" data-arg="Favorites — 2 works"><b>Favorites</b><span>2 works</span></div><div class="person" data-act="toast" data-arg="Create a new playlist"><b>+ New playlist</b><span>empty room</span></div>`;
+  }
+}
+function updateB(){
+  const c=S.cur();
+  el('bArt').className=c.g;
+  document.querySelectorAll('[data-b-title]').forEach(n=>n.textContent=c.t);
+  document.querySelectorAll('[data-b-artist]').forEach(n=>n.textContent=c.a);
+  document.querySelectorAll('[data-b-album]').forEach(n=>n.textContent=c.al);
+  document.querySelectorAll('[data-b-dur]').forEach(n=>n.textContent=fmt(c.d));
+  document.querySelectorAll('[data-b-status]').forEach(n=>n.textContent=fmt(S.pos)+' elapsed · '+(S.playing?'playing':'paused'));
+  el('bHair').innerHTML=`<i style="width:${S.frac()*100}%"></i>`;
+  el('bRep').style.opacity=UI.B.rep?1:.5;
+  document.querySelector('#phB .play').textContent=S.playing?'⏸':'▶';
+  document.querySelectorAll('[data-b-fav]').forEach(n=>n.textContent=S.favs[SONGS.indexOf(c)]?'♥':'♡');
+  document.querySelector('#phB [data-fav="b"]').classList.toggle('favOn',!!S.favs[SONGS.indexOf(c)]);
+}
+
+/* C */
+const TAPES=[{n:'FLOW QUEUE',g:'g1',flow:true},{n:'FAVORITES',g:'g5',fav:true},{n:'GYPMIX',g:'g3'},{n:'LATE NIGHT',g:'g6'},{n:'ROAD 2024',g:'g4'}];
+function buildC(){
+  el('cShelf').innerHTML=TAPES.map((t,i)=>`<div class="spine ${t.g} ${i===0?'on':''}" data-act="c-tape" data-arg="${i}"><s>${t.n}</s></div>`).join('');
+  el('cAlbum').innerHTML=[0,1,2].map(i=>`<div class="sleeve" data-act="c-sleeve" data-arg="${i}"><i class="${SONGS[i].g}"></i><s>${SONGS[i].t}</s><em>Single</em></div>`).join('');
+  el('cVU').innerHTML=Array.from({length:12},(_,i)=>`<div class="seg" data-act="c-seek" data-arg="${i}"></div>`).join('');
+}
+function buildCQueue(){ el('cQueue').innerHTML=S.list.map((si,i)=>`<div class="prog ${i===S.idx?'live':''}"><div class="t">${i===S.idx?'NOW':String(i+1).padStart(2,'0')}</div><div class="n">${SONGS[si].t}<em>${SONGS[si].a} · ${fmt(SONGS[si].d)}</em></div></div>`).join(''); }
+function updateC(){
+  const c=S.cur();
+  el('cTape').style.width=(S.frac()*100)+'%';
+  document.querySelectorAll('[data-c-title]').forEach(n=>n.textContent=c.t);
+  document.querySelectorAll('[data-c-time]').forEach(n=>n.textContent=c.a+' · '+fmt(S.pos)+' / '+fmt(c.d));
+  document.querySelectorAll('[data-c-state]').forEach(n=>n.textContent=(S.playing?'PLAYING':'PAUSED')+' · SIDE '+UI.C.side);
+  const segs=el('cVU').children, on=Math.round(S.frac()*12);
+  for(let i=0;i<12;i++){ segs[i].className='seg'+(i<on?(i>=10?' hot':' on'):''); }
+  document.querySelectorAll('#phC [data-act="toggle"]').forEach(b=>b.textContent=S.playing?'⏸':'▶');
+  el('kShuf').classList.toggle('on',S.shuffle);
+  el('kRpt').classList.toggle('on',S.repeat);
+  document.querySelectorAll('[data-c-side]').forEach(n=>n.textContent=UI.C.side);
+  el('phC').classList.toggle('night',UI.C.night);
+}
+
+/* D */
+function buildD(){
+  const hist=[{h:'09:12',i:1},{h:'14:40',i:2}];
+  el('dJournal').innerHTML=hist.map(x=>`<div class="entry" data-act="d-play" data-arg="${x.i}"><div class="stamp">${x.h}</div><div class="chip ${SONGS[x.i].g}"></div><div class="tx"><b>${SONGS[x.i].t}</b><span>${SONGS[x.i].a}</span></div><div class="hair"></div></div>`).join('')
+    +`<div class="entry" data-act="d-play" data-arg="${SONGS.indexOf(S.cur())}"><div class="stamp">now</div><div class="chip ${S.cur().g}" id="dEntryChip"></div><div class="tx"><b>${S.cur().t}</b><span>${S.cur().a} · playing</span></div><div class="hair partial"></div></div>`;
+  el('dBrowse').innerHTML=SONGS.map((s,i)=>`<div class="srow" data-act="d-play" data-arg="${i}"><div class="chip ${s.g}"></div><b>${s.t}</b><span>${fmt(s.d)}</span></div>`).join('');
+}
+function updateD(){
+  const c=S.cur(), si=SONGS.indexOf(c);
+  ['dNowChip','dNowChip2','dArt'].forEach(id=>el(id).className='chip '+c.g+(id==='dArt'?'':''));
+  el('dArt').style.width='32px'; el('dArt').style.height='32px';
+  document.querySelectorAll('[data-d-now]').forEach(n=>n.textContent=c.t);
+  document.querySelectorAll('[data-d-nowtime]').forEach(n=>n.textContent=fmt(S.pos)+' / '+fmt(c.d));
+  document.querySelectorAll('[data-d-artist]').forEach(n=>n.textContent=c.a);
+  document.querySelectorAll('[data-d-h1]').forEach(n=>{const w=c.t.split(' ');n.innerHTML=w.map(x=>x+'<br>').join('');});
+  document.querySelectorAll('[data-d-context]').forEach(n=>n.textContent=clock()+' · '+(S.shuffle?'SHUFFLE':'FLOW'));
+  el('dVbar').innerHTML=`<i style="height:${S.frac()*100}%"></i>`;
+  document.querySelector('#phD .play').textContent=S.playing?'⏸':'▶';
+  document.querySelectorAll('[data-d-fav]').forEach(n=>n.textContent=S.favs[si]?'♥':'♡');
+  document.querySelector('#phD .low [data-fav="d"]').classList.toggle('favOn',!!S.favs[si]);
+  el('phD').classList.toggle('lite',UI.D.lite);
+  document.querySelectorAll('#phD .dots').forEach(d=>{ [...d.children].forEach((dot,i)=>dot.classList.toggle('on',i===UI.D.plane)); });
+  document.querySelectorAll('#phD .scr').forEach((s,i)=>s.classList.toggle('hid',('p'+UI.D.plane)!==s.dataset.scr));
+}
+
+/* E */
+function buildE(){
+  el('eMosaic').innerHTML=`<div class="tile wide" data-act="e-play" data-arg="0"><i class="g1"></i><span>ALBUM</span><b>Night Drive</b></div>
+  <div class="tile" data-act="e-play" data-arg="1"><i class="g3"></i><span>ALBUM</span><b>Morning</b></div>
+  <div class="tile" data-act="e-play" data-arg="2"><i class="g4"></i><span>ALBUM</span><b>Slow Wave</b></div>
+  <div class="tile" data-act="toast" data-arg="Artist page: Unknown artist"><i class="g6"></i><span>ARTIST</span><b>Unknown</b></div>
+  <div class="tile" data-act="toast" data-arg="Folder: /Music"><i class="g7"></i><span>FOLDER</span><b>Music</b></div>`;
+  el('eLib').innerHTML=SONGS.map((s,i)=>`<div class="orow ${i===S.list[S.idx]?'on':''}" data-act="e-play" data-arg="${i}"><div class="qi">${i+1}</div><div class="a ${s.g}"></div><div class="tx"><b>${s.t}</b><span>${s.a}</span></div><div class="qi">${fmt(s.d)}</div></div>`).join('');
+  el('eQueue').innerHTML=S.list.map((si,i)=>`<div class="orow ${i===S.idx?'on':''}" data-act="e-jumpq" data-arg="${i}"><div class="qi">${i===S.idx?'▶':i+1}</div><div class="a ${SONGS[si].g}"></div><div class="tx"><b>${SONGS[si].t}</b><span>${SONGS[si].a}</span></div><div class="qi">${fmt(SONGS[si].d)}</div></div>`).join('');
+}
+function updateE(){
+  const c=S.cur(), si=SONGS.indexOf(c);
+  el('phE').style.background=c.g.includes('g1')?'linear-gradient(165deg,#241a3d 0%,#3d1d54 45%,#1c1430 100%)':getComputedStyle(document.querySelector('.'+c.g)).backgroundImage;
+  el('eArt').className=c.g; el('eMiniArt').className='a '+c.g;
+  el('eRing').style.setProperty('--p',S.frac()*100);
+  document.querySelectorAll('[data-e-title]').forEach(n=>n.textContent=c.t);
+  document.querySelectorAll('[data-e-artist]').forEach(n=>n.textContent=c.a);
+  document.querySelectorAll('[data-e-mini]').forEach(n=>n.textContent=c.t);
+  document.querySelectorAll('[data-e-minitime]').forEach(n=>n.textContent=fmt(S.pos)+' / '+fmt(c.d));
+  document.querySelectorAll('[data-e-t1]').forEach(n=>n.textContent=fmt(S.pos));
+  document.querySelectorAll('[data-e-t2]').forEach(n=>n.textContent=fmt(c.d));
+  document.querySelectorAll('[data-e-pct]').forEach(n=>n.textContent=Math.round(S.frac()*100)+'%');
+  document.querySelectorAll('[data-e-count]').forEach(n=>n.textContent='/ '+SONGS.length+' tracks');
+  document.querySelectorAll('[data-e-fav]').forEach(n=>n.textContent=S.favs[si]?'♥':'♡');
+  document.querySelector('#phE .tt .fav').classList.toggle('favOn',!!S.favs[si]);
+  document.querySelectorAll('#phE .dock .big, #phE .mini .pp').forEach(b=>b.textContent=S.playing?'⏸':'▶');
+}
+
+/* ───────── tick ───────── */
+setInterval(()=>{
+  if(S.playing){ S.pos+=0.5;
+    if(S.pos>=S.cur().d){ if(S.repeat){S.pos=0;} else { S.idx=(S.idx+1)%S.list.length; S.pos=0; after('engine'); } }
+  }
+  document.querySelectorAll('[data-clock]').forEach(n=>n.textContent=clock());
+  updateA(); updateB(); updateC(); updateD(); updateE();
+},500);
+
+function after(why){
+  buildA(); buildB(); buildC(); updateA(); updateB(); updateC(); buildD(); buildE(); updateD(); updateE(); buildCQueue();
+}
+
+/* ───────── interactions ───────── */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]'); if(!t) return;
+  const a=t.dataset.act, arg=t.dataset.arg;
+  switch(a){
+    case 'toggle': toggle(); break;
+    case 'next': next(); toast('Skipped — '+S.cur().t); break;
+    case 'prev': prev(); break;
+    case 'fav': { const si=SONGS.indexOf(S.cur()); S.favs[si]=!S.favs[si]; toast(S.favs[si]?'Added to favorites':'Removed from favorites'); break; }
+    case 'key': if(arg==='shuffle'){S.shuffle=!S.shuffle; if(S.shuffle){S.list=shuffleOrder(S.list[S.idx]);S.idx=0;} toast('Shuffle '+(S.shuffle?'on':'off'));} else {S.repeat=!S.repeat; toast('Repeat '+(S.repeat?'on':'off'));} break;
+    case 'toast': toast(arg); break;
+
+    /* A */
+    case 'tune': { UI.A.station=+arg; UI.A.preset=PRESETS.findIndex(p=>p.st===+arg); if(UI.A.preset<0)UI.A.preset=0; const st=STATIONS[UI.A.station]; S.list=[...st.list]; S.idx=0; S.pos=0; S.playing=true; buildA(); toast('Tuned to '+st.f+' — '+st.l); break; }
+    case 'preset': { if(arg==='new'){ toast('Memory slot free — name your station in the full app'); break; } const pr=PRESETS[+arg]; UI.A.preset=+arg; UI.A.station=pr.st; const st=STATIONS[UI.A.station]; S.list=[...st.list]; S.idx=0; S.pos=0; S.playing=true; buildA(); toast('Memory '+pr.key+' — '+st.l); break; }
+    case 'a-archive': scr('A','archive'); break;
+    case 'a-search': scr('A','search'); renderASearch(); setTimeout(()=>el('aSearchIn')&&el('aSearchIn').focus(),50); break;
+    case 'a-settings': scr('A','settings'); break;
+    case 'a-play': { playIdx(+arg); scr('A','now'); toast('On air — '+S.cur().t); break; }
+    case 'a-face': UI.A.face=UI.A.face==='day'?'night':'day'; toast(UI.A.face==='day'?'Day faceplate':'Night faceplate'); break;
+    case 'a-speed': { UI.A.speed=UI.A.speed===2?0.5:(UI.A.speed===0.5?1:2); toast('Tape speed '+UI.A.speed+'× (demo)'); break; }
+    case 'a-sleep': { UI.A.sleep=UI.A.sleep?0:30; toast(UI.A.sleep?'Sleep timer — '+UI.A.sleep+' min (demo)':'Sleep timer off'); break; }
+    case 'a-shuffle': S.shuffle=!S.shuffle; if(S.shuffle){S.list=shuffleOrder(S.list[S.idx]);S.idx=0;} toast('Shuffle '+(S.shuffle?'on':'off')); break;
+    case 'a-repeat': S.repeat=!S.repeat; toast('Repeat '+(S.repeat?'on':'off')); break;
+    case 'a-open': UI.A.scr='now'; scr('A','now'); break;
+    case 'a-guide': scr('A','guide'); break;
+    case 'a-queue': scr('A','queue'); break;
+    case 'seek-half': seek(0.5); break;
+
+    /* B */
+    case 'b-pill': UI.B.pill=arg; document.querySelectorAll('#phB .pill b').forEach(b=>b.classList.toggle('on',b.dataset.arg===arg)); buildB(); break;
+    case 'b-play': playIdx(+arg); scr('B','now'); toast('Now on view — '+S.cur().t); break;
+    case 'b-gal': scr('B','gal'); break;
+    case 'b-seek': { const r=t.getBoundingClientRect(); seek((e.clientX-r.left)/r.width); break; }
+    case 'b-repeat': UI.B.rep=!UI.B.rep; S.repeat=UI.B.rep; toast('Repeat '+(UI.B.rep?'on':'off')); break;
+
+    /* C */
+    case 'c-tape': { const tp=TAPES[+arg];
+      if(tp.flow){ S.list=flowOrder(); S.idx=0; S.pos=0; S.playing=true; toast('Flow Queue — fresh mix loaded'); }
+      else if(tp.fav){ const f=SONGS.map((s,i)=>S.favs[i]?i:-1).filter(i=>i>=0); S.list=f.length?f:[0]; S.idx=0; S.pos=0; S.playing=true; toast('Favorites — '+S.list.length+' tracks'); }
+      else { S.list=flowOrder(); S.idx=0; S.pos=0; S.playing=true; toast(tp.n+' — playing'); }
+      scr('C','now'); break; }
+    case 'c-sleeve': playIdx(+arg); scr('C','now'); toast('Now on the deck — '+S.cur().t); break;
+    case 'c-shelf': scr('C','shelf'); break;
+    case 'c-now': scr('C','now'); break;
+    case 'c-queue': buildCQueue(); scr('C','queue'); break;
+    case 'c-seek': seek((+arg+0.5)/12); break;
+    case 'c-side': UI.C.side=UI.C.side==='A'?'B':'A'; S.shuffle=UI.C.side==='B'; toast('Side '+UI.C.side+(S.shuffle?' — shuffle on':'')); break;
+    case 'c-speed': toast('Speed: 1.0× (demo)'); break;
+    case 'c-theme': UI.C.night=!UI.C.night; break;
+
+    /* D */
+    case 'd-plane': UI.D.plane=+arg; updateD(); break;
+    case 'd-play': playIdx(+arg); UI.D.plane=2; updateD(); toast('Playing — '+S.cur().t); break;
+    case 'd-now': UI.D.plane=2; updateD(); break;
+    case 'd-seek': { const r=t.getBoundingClientRect(); seek((e.clientY-r.top)/r.height); break; }
+    case 'd-theme': UI.D.lite=!UI.D.lite; toast(UI.D.lite?'Paper edition':'Ink edition'); break;
+
+    /* E */
+    case 'e-play': playIdx(+arg); updateE(); toast('Playing — '+S.cur().t); break;
+    case 'e-jumpq': S.idx=+arg; S.pos=0; S.playing=true; break;
+    case 'e-now': scr('E','now'); break;
+    case 'e-home': scr('E','home'); break;
+    case 'e-lib': buildE(); scr('E','lib'); break;
+    case 'e-queue': buildE(); scr('E','queue'); break;
+    case 'e-set': toast('Settings (demo)'); break;
+    case 'e-sleep': toast('Sleep timer — 30 min (demo)'); break;
+
+    /* chooser */
+    case 'jump': document.querySelector('.card[data-design="'+arg+'"]').scrollIntoView({behavior:'smooth',block:'center'}); break;
+    case 'reset': Object.assign(S,{list:flowOrder(),idx:0,pos:12,playing:true,favs:{0:true,2:true},shuffle:false,repeat:false}); UI.A.station=1; UI.B.pill='music'; UI.C.side='A'; UI.D.plane=0; scr('A','guide'); scr('B','gal'); scr('C','shelf'); scr('E','home'); document.querySelectorAll('#phB .pill b').forEach(b=>b.classList.toggle('on',b.dataset.arg==='music')); after('reset'); toast('Demo reset'); break;
+  }
+  updateA(); updateB(); updateC(); updateD(); updateE();
+});
+
+/* A scanner — live search-as-you-type */
+document.addEventListener('input',e=>{ if(e.target.id==='aSearchIn') renderASearch(); });
+
+/* ring seek (E) */
+el('eRing').addEventListener('click',e=>{
+  const r=el('eRing').getBoundingClientRect();
+  const dx=e.clientX-(r.left+r.width/2), dy=e.clientY-(r.top+r.height/2);
+  let ang=Math.atan2(dy,dx)*180/Math.PI+90; if(ang<0)ang+=360;
+  seek(ang/360);
+});
+
+/* D swipe — horizontal drags on the phone itself move between planes */
+(()=>{ const z=el('phD'); let x0=null,y0=null;
+  z.addEventListener('pointerdown',e=>{x0=e.clientX;y0=e.clientY;});
+  z.addEventListener('pointerup',e=>{ if(x0===null)return; const dx=e.clientX-x0,dy=e.clientY-y0; x0=null;
+    if(Math.abs(dx)<45||Math.abs(dx)<=Math.abs(dy)) return;
+    UI.D.plane=Math.max(0,Math.min(2,UI.D.plane+(dx<0?1:-1))); updateD(); });
+})();
+
+/* pick buttons (outside delegation) */
+function pick(btn,d){ document.querySelectorAll('.card').forEach(c=>c.classList.remove('picked')); btn.closest('.card').classList.add('picked');
+  toast('Direction '+d+' marked — now confirm in chat: "go with '+d+'"'); }
+
+/* init */
+after('init');
+</script>
+</body>
+</html>

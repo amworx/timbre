@@ -1,0 +1,62 @@
+// Developer-environment support for building where dl.google.com is blocked.
+//
+// 1. Rewrites buildscript repositories of every project (including legacy
+//    plugin modules that declare their own `buildscript { repositories }`)
+//    to reachable mirrors.
+// 2. Injects `namespace` for legacy Android library plugins that predate the
+//    namespace DSL (they declare `package` in their manifest instead).
+//    AGP 8+ refuses to evaluate them otherwise; Flutter's plugin loader
+//    normally covers this, but only for plugins that use the modern DSL.
+//
+// Install: copy to ~/.gradle/init.d/ (already done for this machine).
+// Machines with normal connectivity are unaffected if this file is absent.
+
+def mirrorRepos = [
+        'https://maven.aliyun.com/repository/google',
+        'https://maven.aliyun.com/repository/central',
+        'https://repo.huaweicloud.com/repository/maven',
+        'https://plugins.gradle.org/m2',
+]
+
+allprojects {
+    buildscript {
+        repositories {
+            clear()
+            mirrorRepos.each { r -> maven { url r } }
+        }
+    }
+    afterEvaluate { project ->
+        try {
+            def androidExt = project.extensions.findByName('android')
+            if (androidExt != null) {
+                // Use locally installed SDK platform/build-tools everywhere
+                // (SDK Manager downloads would hit blocked Google hosts).
+                androidExt.buildToolsVersion = '36.0.0'
+                androidExt.compileSdkVersion = 'android-36.1'
+                // Align legacy Kotlin plugin modules (Java 1.8 defaults) to a
+                // single consistent JVM target.
+                try {
+                    def ko = androidExt.kotlinOptions
+                    if (ko != null) {
+                        ko.jvmTarget = '17'
+                        androidExt.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+                        androidExt.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+                    }
+                } catch (Exception ignored) {
+                    // Modern plugins manage their own consistent targets.
+                }
+                if (project.pluginManager.hasPlugin('com.android.library')) {
+                    if (androidExt.namespace == null || androidExt.namespace.toString().isEmpty()) {
+                        // Derive a stable namespace from the manifest package or group.
+                        def ns = project.group?.toString()
+                        if (ns == null || ns.isEmpty()) ns = 'app.timbre.legacy'
+                        androidExt.namespace = ns
+                        project.logger.lifecycle("timbre-mirrors: injected namespace '", ns, "' for ", project.path)
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Never break unrelated projects.
+        }
+    }
+}
