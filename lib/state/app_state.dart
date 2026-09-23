@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import '../domain/flow_queue.dart';
 import '../domain/models.dart';
 import '../media/media_files.dart';
 import '../playback/timbre_audio_handler.dart';
+import 'notification_permission.dart';
 
 /// Library load state for the whole app.
 enum LoadState { loading, ready, error }
@@ -84,6 +86,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> bootstrap() async {
     await refreshPermissionState();
+    await refreshNotificationState();
     if (permissionPhase == PermissionPhase.granted) {
       await scanLibrary();
     } else {
@@ -163,10 +166,51 @@ class AppState extends ChangeNotifier {
   }
 
   // ------------------------------------------------------------------
+  // Notification permission (Android 13+): playback never depends on it,
+  // but background/lock-screen controls do — so ask once on first play
+  // without ever blocking the music, and reflect the state in Settings.
+  // ------------------------------------------------------------------
+
+  NotificationPhase notificationPhase = NotificationPhase.unknown;
+
+  Future<void> refreshNotificationState() async {
+    notificationPhase =
+        notificationPhaseOf(await ph.Permission.notification.status);
+    notifyListeners();
+  }
+
+  /// System prompt for notifications. Returns true when controls can show.
+  Future<bool> requestNotifications() async {
+    final status = await ph.Permission.notification.request();
+    notificationPhase = notificationPhaseOf(status);
+    notifyListeners();
+    return notificationPhase == NotificationPhase.granted;
+  }
+
+  /// One-time prompt on first playback. Fire-and-forget on purpose:
+  /// the music starts immediately either way.
+  Future<void> promptNotificationsOnce() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('notifications.prompted') == true) return;
+      await prefs.setBool('notifications.prompted', true);
+      await refreshNotificationState();
+      if (notificationPhase == NotificationPhase.denied) {
+        await requestNotifications();
+      }
+    } catch (_) {
+      // Permission plumbing must never break playback.
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Playback facade (thin wrappers over the handler)
   // ------------------------------------------------------------------
 
-  Future<void> playQueue(QueueSpec spec) => player.playQueue(spec);
+  Future<void> playQueue(QueueSpec spec) {
+    unawaited(promptNotificationsOnce());
+    return player.playQueue(spec);
+  }
 
   Future<void> playSong(Song song, {List<Song>? context}) {
     final list = context ?? [song];

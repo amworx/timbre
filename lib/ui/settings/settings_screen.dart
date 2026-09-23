@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../state/app_state.dart';
+import '../../state/notification_permission.dart';
 import '../../update/app_updater.dart';
 import '../theme/theme_controller.dart';
 
@@ -269,6 +270,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onCancel: _cancelDownload,
           ),
           const Divider(),
+          const _SectionLabel('Notifications'),
+          const _NotificationTile(),
+          const Divider(),
           const _SectionLabel('About'),
           const ListTile(
             leading: Icon(Icons.lock_outline_rounded),
@@ -428,6 +432,52 @@ class _StatusLine extends StatelessWidget {
           Expanded(child: Text(text)),
         ],
       ),
+    );
+  }
+}
+
+/// Shows the notification permission state and lets the user fix it.
+/// Playback works regardless — this only gates background/lock-screen
+/// controls, which is exactly what the copy says.
+class _NotificationTile extends StatelessWidget {
+  const _NotificationTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final (icon, title, subtitle) = switch (state.notificationPhase) {
+      NotificationPhase.granted => (
+          Icons.notifications_active_outlined,
+          'Background controls on',
+          'Playback controls show on the lock screen and in notifications.',
+        ),
+      NotificationPhase.permanentlyDenied => (
+          Icons.notifications_off_outlined,
+          'Background controls off',
+          'Music still plays. Enable notifications in system settings for lock-screen controls.',
+        ),
+      _ => (
+          Icons.notifications_outlined,
+          'Background controls off',
+          'Music still plays. Turn on notifications for lock-screen controls.',
+        ),
+    };
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: state.notificationPhase == NotificationPhase.granted
+          ? const Icon(Icons.check_circle_outline_rounded)
+          : const Icon(Icons.chevron_right_rounded),
+      onTap: () async {
+        if (state.notificationPhase ==
+            NotificationPhase.permanentlyDenied) {
+          await state.openAppSettings();
+          await state.refreshNotificationState();
+        } else {
+          await state.requestNotifications();
+        }
+      },
     );
   }
 }
