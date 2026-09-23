@@ -1,9 +1,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../icons/broadcast_icons.dart';
@@ -25,11 +27,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Song> _recent = const [];
 
-  static const _stations = [
-    (freq: '89.1', label: 'ARCHIVE'),
-    (freq: '98.4', label: 'FLOW'),
-    (freq: '104.7', label: 'FAVORITES'),
-  ];
+  // Station labels come from the locale (built per-build, not const).
+  List<({String freq, String label})> _stationsOf(BuildContext context) {
+    final strings = t(context);
+    return [
+      (freq: '89.1', label: strings.stationArchive),
+      (freq: '98.4', label: strings.stationFlow),
+      (freq: '104.7', label: strings.stationFavorites),
+    ];
+  }
 
   int get _stationForState {
     final state = context.read<AppState>();
@@ -58,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final state = context.watch<AppState>();
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final strings = t(context);
 
     if (state.loadState == LoadState.loading) {
       return const Center(child: CircularProgressIndicator());
@@ -67,14 +74,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('SIGNAL LOST', style: TimbreText.kicker(context, color: cs.error)),
+            Text(strings.signalLost,
+                style: TimbreText.kicker(context, color: cs.error)),
             const SizedBox(height: TimbreSpacing.sm),
-            Text('Could not read your library.',
+            Text(strings.couldNotReadLibrary,
                 style: theme.textTheme.bodyMedium),
             const SizedBox(height: TimbreSpacing.md),
             OutlinedButton(
               onPressed: () => state.scanLibrary(),
-              child: const Text('RETRY SCAN'),
+              child: Text(strings.retryScan),
             ),
           ],
         ),
@@ -82,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final station = _stationForState;
+    final stations = _stationsOf(context);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -102,20 +111,20 @@ class _HomeScreenState extends State<HomeScreen> {
           // Status row — date, archive, scanner, service menu, clock.
           Row(
             children: [
-              Text(_dateLabel(), style: TimbreText.kicker(context)),
+              Text(_dateLabel(context), style: TimbreText.kicker(context)),
               const Spacer(),
               IconButton(
-                tooltip: 'Archive',
+                tooltip: strings.tipArchive,
                 onPressed: () => AppNavigator.openLibraryTab(context),
                 icon: const BIcon(BIcons.libraryTune, size: 19),
               ),
               IconButton(
-                tooltip: 'Scanner',
+                tooltip: strings.tipScanner,
                 onPressed: () => AppNavigator.openSearchTab(context),
                 icon: const BIcon(BIcons.search, size: 19),
               ),
               IconButton(
-                tooltip: 'Settings',
+                tooltip: strings.tipSettings,
                 onPressed: () => AppNavigator.openSettings(context),
                 icon: const Icon(Icons.settings_outlined, size: 22),
               ),
@@ -147,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Tuner dial.
           _TunerDial(
-            stations: _stations,
+            stations: stations,
             selected: station,
             onSelect: (i) => _tuneTo(state, i),
           ),
@@ -157,9 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Center(
             child: Column(
               children: [
-                Text(_stations[station].freq, style: TimbreText.dial(context, size: 34)),
+                Text(stations[station].freq,
+                    style: TimbreText.dial(context, size: 34)),
                 const SizedBox(height: 2),
-                Text('${_stations[station].label} · TUNED',
+                Text('${stations[station].label} · ${strings.tuned}',
                     style: TimbreText.kicker(context)),
               ],
             ),
@@ -170,12 +180,13 @@ class _HomeScreenState extends State<HomeScreen> {
           if (state.playlists.isNotEmpty) ...[
             _PresetsRow(),
             const SizedBox(height: TimbreSpacing.xs),
-            Text('MEMORY BANK · PLAYLISTS', style: TimbreText.section(context)),
+            Text(strings.memoryBankPlaylists,
+                style: TimbreText.section(context)),
             const SizedBox(height: TimbreSpacing.md),
           ],
 
           // Program guide.
-          Text('PROGRAM GUIDE', style: TimbreText.section(context)),
+          Text(strings.programGuide, style: TimbreText.section(context)),
           const SizedBox(height: TimbreSpacing.sm),
 
           if (state.hasMusic) _GuideOnAir(entry: state.continueEntry),
@@ -191,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!state.hasMusic) ...[
             const SizedBox(height: TimbreSpacing.xl),
             Text(
-              'No transmissions found.\nAdd music to your device and pull to scan.',
+              strings.noTransmissions,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: cs.onSurfaceVariant, height: 1.7),
@@ -203,27 +214,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _dateLabel() {
-    const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
-    ];
-    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    final now = DateTime.now();
-    final day = days[now.weekday - 1];
-    final dd = now.day.toString().padLeft(2, '0');
-    return '$day $dd ${months[now.month - 1]}';
+  String _dateLabel(BuildContext context) {
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('EEE dd MMM', locale).format(DateTime.now());
   }
 
   Future<void> _tuneTo(AppState state, int i) async {
+    if (!mounted) return;
+    final strings = t(context);
     switch (i) {
       case 0:
         if (state.songs.isEmpty) return;
         await state.playQueue(QueueSpec(
           songs: state.songs,
           startIndex: 0,
-          title: 'Archive',
-          subtitle: '${state.songs.length} tracks',
+          title: strings.queueArchiveTitle,
+          subtitle: strings.tracks(state.songs.length),
         ));
         break;
       case 1:
@@ -232,15 +238,15 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         final favs = state.favoriteSongs;
         if (favs.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('No favorites yet — tap the heart on any track')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(strings.noFavoritesSnack)));
           return;
         }
         await state.playQueue(QueueSpec(
           songs: favs,
           startIndex: 0,
-          title: 'Favorites',
-          subtitle: '${favs.length} tracks',
+          title: strings.queueFavoritesTitle,
+          subtitle: strings.tracks(favs.length),
         ));
         break;
     }
@@ -253,7 +259,8 @@ class _HomeScreenState extends State<HomeScreen> {
         : (state.songs.isEmpty ? null : state.songs);
     if (pool == null || pool.isEmpty) return;
     final seedSong = pool[Random().nextInt(pool.length)];
-    await state.startFlow(seedSong);
+    if (!mounted) return;
+    await state.startFlow(seedSong, t(context));
   }
 }
 
@@ -394,9 +401,9 @@ class _GuideOnAir extends StatelessWidget {
     if (song == null) return const SizedBox.shrink();
 
     return _GuideRow(
-      leading: 'NOW',
+      leading: t(context).now,
       title: song.title,
-      subtitle: '${song.artist} · on air',
+      subtitle: '${displayArtist(song, t(context))} · ${t(context).onAir}',
       live: true,
       art: Artwork(albumId: song.albumId, title: song.album, size: 34, radius: 6),
       onTap: () => AppNavigator.openNowPlaying(context),
@@ -409,9 +416,9 @@ class _GuideFlowRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return _GuideRow(
-      leading: 'FLOW',
-      title: 'Flow Queue',
-      subtitle: 'A fresh mix from your library',
+      leading: t(context).flow,
+      title: t(context).flowQueue,
+      subtitle: t(context).flowMix,
       art: Container(
         width: 34,
         height: 34,
@@ -438,7 +445,7 @@ class _GuideHistoryRow extends StatelessWidget {
     return _GuideRow(
       leading: (index + 1).toString().padLeft(2, '0'),
       title: song.title,
-      subtitle: song.artist,
+      subtitle: displayArtist(song, t(context)),
       art: Artwork(albumId: song.albumId, title: song.album, size: 34, radius: 6),
       onTap: () => context.read<AppState>().playSong(song, context: queue),
     );

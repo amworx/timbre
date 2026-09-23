@@ -7,12 +7,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../../state/notification_permission.dart';
 import '../../update/app_updater.dart';
 import '../theme/theme_controller.dart';
 
-/// Settings: theme, history management, updates, about.
+/// Settings: theme, history management, updates, notifications, about.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -75,7 +76,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _checkResult = null;
       _needsInstallPermission = false;
     });
-    final result = await _updater.checkForUpdate();
+    final result = await _updater.checkForUpdate(t(context));
     if (!mounted) return;
     setState(() {
       _checking = false;
@@ -85,10 +86,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _downloadAndInstall(UpdateInfo info) async {
     if (_downloading) return;
+    final strings = t(context);
     setState(() {
       _downloading = true;
       _downloadProgress = null;
-      _downloadStatus = 'Starting download…';
+      _downloadStatus = strings.startingDownload;
       _needsInstallPermission = false;
     });
     late Stream<OtaEvent> stream;
@@ -106,31 +108,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _otaSub = stream.listen(
       (event) {
         if (!mounted) return;
+        final strings = t(context);
         setState(() {
           switch (event.status) {
             case OtaStatus.DOWNLOADING:
               final pct = double.tryParse((event.value ?? '').trim());
               _downloadProgress = pct == null ? null : pct / 100;
-              _downloadStatus = describeOtaEvent(event);
+              _downloadStatus = describeOtaEvent(event, strings);
             case OtaStatus.INSTALLING:
               // The system installer takes over from here; the user taps
               // "Install" there to finish. Keep the message, stop the bar.
               _downloadProgress = 1;
-              _downloadStatus =
-                  'Download complete — opening installer… Tap Install to finish.';
+              _downloadStatus = strings.downloadDoneInstaller;
             case OtaStatus.INSTALLATION_DONE:
               _downloading = false;
               _downloadProgress = 1;
-              _downloadStatus = 'Installed. Restart the app if it is still open.';
+              _downloadStatus = strings.installedRestart;
             case OtaStatus.CANCELED:
               _downloading = false;
               _downloadProgress = null;
-              _downloadStatus = describeOtaEvent(event);
+              _downloadStatus = describeOtaEvent(event, strings);
             case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
               _downloading = false;
               _downloadProgress = null;
-              _downloadStatus =
-                  'Android blocked the install. Allow “Install unknown apps” for Timbre, then retry.';
+              _downloadStatus = strings.installBlocked;
               _needsInstallPermission = true;
             case OtaStatus.ALREADY_RUNNING_ERROR:
             case OtaStatus.DOWNLOAD_ERROR:
@@ -139,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             case OtaStatus.INTERNAL_ERROR:
               _downloading = false;
               _downloadProgress = null;
-              _downloadStatus = describeOtaEvent(event);
+              _downloadStatus = describeOtaEvent(event, strings);
           }
         });
       },
@@ -148,7 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() {
           _downloading = false;
           _downloadProgress = null;
-          _downloadStatus = 'Update failed: $e';
+          _downloadStatus = '${t(context).evtInternal} ($e)';
         });
       },
     );
@@ -163,63 +164,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _downloading = false;
       _downloadProgress = null;
-      _downloadStatus = 'Download canceled.';
+      _downloadStatus = t(context).downloadCanceled;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final strings = t(context);
+
+    String themeLabel(String mode) => switch (mode) {
+          'light' => strings.light,
+          'dark' => strings.dark,
+          _ => strings.followSystem,
+        };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(strings.settingsTitle)),
       body: ListView(
         children: [
-          const _SectionLabel('Appearance'),
+          _SectionLabel(strings.appearance),
           RadioGroup<String>(
             groupValue: _themeMode,
             onChanged: (v) => _setTheme(v!),
-            child: const Column(
+            child: Column(
               children: [
-                RadioListTile<String>(
-                  title: Text('Follow system'),
-                  value: 'system',
-                ),
-                RadioListTile<String>(
-                  title: Text('Light'),
-                  value: 'light',
-                ),
-                RadioListTile<String>(
-                  title: Text('Dark'),
-                  value: 'dark',
-                ),
+                for (final mode in const ['system', 'light', 'dark'])
+                  RadioListTile<String>(
+                    title: Text(themeLabel(mode)),
+                    value: mode,
+                  ),
               ],
             ),
           ),
           const Divider(),
-          const _SectionLabel('Listening memory'),
+          _SectionLabel(strings.listeningMemory),
           ListTile(
             enabled: !_busy,
             leading: const Icon(Icons.history_rounded),
-            title: const Text('Clear listening history'),
-            subtitle: const Text(
-                'Removes play counts, resume positions and Continue Listening.'),
+            title: Text(strings.clearHistory),
+            subtitle: Text(strings.clearHistoryBody),
             onTap: () async {
               final confirmed = await showDialog<bool>(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Clear listening history?'),
-                  content: const Text(
-                      'This cannot be undone. Favorites and playlists are kept.'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel')),
-                    FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Clear')),
-                  ],
-                ),
+                builder: (context) {
+                  final strings = t(context);
+                  return AlertDialog(
+                    title: Text(strings.clearHistoryTitle),
+                    content: Text(strings.clearHistoryContent),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: Text(strings.cancel)),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: Text(strings.clear)),
+                    ],
+                  );
+                },
               );
               if (confirmed == true) {
                 setState(() => _busy = true);
@@ -230,21 +232,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           const Divider(),
-          const _SectionLabel('Library'),
+          _SectionLabel(strings.librarySection),
           ListTile(
             leading: const Icon(Icons.refresh_rounded),
-            title: const Text('Rescan device music'),
+            title: Text(strings.rescanDevice),
             subtitle: Text(state.hasMusic
-                ? '${state.songs.length} songs found on this device'
-                : 'No music found yet'),
+                ? strings.songsFound(state.songs.length)
+                : strings.songsFound(0)),
             onTap: () => state.scanLibrary(),
           ),
           const Divider(),
-          const _SectionLabel('Updates'),
+          _SectionLabel(strings.updatesSection),
           ListTile(
             leading: const Icon(Icons.smartphone_rounded),
-            title: const Text('Timbre version'),
-            subtitle: Text('Installed: $_currentVersion'),
+            title: Text(strings.timbreVersion),
+            subtitle: Text(strings.installedVersion(_currentVersion)),
           ),
           ListTile(
             enabled: !_checking && !_downloading,
@@ -255,8 +257,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2.5),
                   )
                 : const Icon(Icons.system_update_rounded),
-            title: const Text('Check for updates'),
-            subtitle: const Text('Compares with the latest GitHub release.'),
+            title: Text(strings.checkUpdates),
+            subtitle: Text(strings.checkUpdatesSub),
             onTap: _checkForUpdates,
           ),
           _UpdateResultView(
@@ -270,24 +272,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onCancel: _cancelDownload,
           ),
           const Divider(),
-          const _SectionLabel('Notifications'),
+          _SectionLabel(strings.notificationsSection),
           const _NotificationTile(),
           const Divider(),
-          const _SectionLabel('About'),
-          const ListTile(
-            leading: Icon(Icons.lock_outline_rounded),
-            title: Text('Your music stays on your device'),
-            subtitle: Text(
-                'Timbre reads audio files only to play them. No account, no tracking. Updates check GitHub only when you ask.'),
+          _SectionLabel(strings.aboutSection),
+          ListTile(
+            leading: const Icon(Icons.lock_outline_rounded),
+            title: Text(strings.musicStaysTitle),
+            subtitle: Text(strings.musicStaysBody),
           ),
           ListTile(
             leading: const Icon(Icons.info_outline_rounded),
-            title: const Text('Timbre'),
-            subtitle: Text('Version $_currentVersion · A calm offline music player'),
+            title: Text(strings.aboutTimbre),
+            subtitle: Text(strings.versionLine(_currentVersion)),
           ),
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+/// Shows the notification permission state and lets the user fix it.
+/// Playback works regardless — this only gates background/lock-screen
+/// controls, which is exactly what the copy says.
+class _NotificationTile extends StatelessWidget {
+  const _NotificationTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final strings = t(context);
+    final (icon, title, subtitle) = switch (state.notificationPhase) {
+      NotificationPhase.granted => (
+          Icons.notifications_active_outlined,
+          strings.notifOnTitle,
+          strings.notifOnBody,
+        ),
+      NotificationPhase.permanentlyDenied => (
+          Icons.notifications_off_outlined,
+          strings.notifOffTitle,
+          strings.notifOffBodyDenied,
+        ),
+      _ => (
+          Icons.notifications_outlined,
+          strings.notifOffTitle,
+          strings.notifOffBody,
+        ),
+    };
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: state.notificationPhase == NotificationPhase.granted
+          ? const Icon(Icons.check_circle_outline_rounded)
+          : const Icon(Icons.chevron_right_rounded),
+      onTap: () async {
+        if (state.notificationPhase ==
+            NotificationPhase.permanentlyDenied) {
+          await state.openAppSettings();
+          await state.refreshNotificationState();
+        } else {
+          await state.requestNotifications();
+        }
+      },
     );
   }
 }
@@ -317,10 +365,11 @@ class _UpdateResultView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final res = result;
+    final strings = t(context);
     if (checking) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(72, 0, 24, 8),
-        child: Text('Checking…'),
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(72, 0, 24, 8),
+        child: Text(strings.checking),
       );
     }
     if (res == null) {
@@ -329,9 +378,9 @@ class _UpdateResultView extends StatelessWidget {
     }
     switch (res) {
       case UpdateNotAvailable():
-        return const _StatusLine(
+        return _StatusLine(
           icon: Icons.check_circle_outline_rounded,
-          text: 'You’re up to date.',
+          text: strings.upToDate,
         );
       case UpdateCheckFailed(:final message):
         return _StatusLine(text: message);
@@ -350,7 +399,7 @@ class _UpdateResultView extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Update ${info.version} available',
+                          strings.updateAvailable(info.version),
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                       ),
@@ -358,7 +407,7 @@ class _UpdateResultView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Installed $currentVersion → ${info.version}.',
+                    strings.installedTo(currentVersion, info.version),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   if (info.notes.trim().isNotEmpty) ...[
@@ -382,7 +431,7 @@ class _UpdateResultView extends StatelessWidget {
                     TextButton.icon(
                       onPressed: onCancel,
                       icon: const Icon(Icons.cancel_outlined),
-                      label: const Text('Cancel'),
+                      label: Text(strings.cancel),
                     ),
                   ] else ...[
                     if (downloadStatus.isNotEmpty) ...[
@@ -393,14 +442,14 @@ class _UpdateResultView extends StatelessWidget {
                       FilledButton.tonalIcon(
                         onPressed: openAppSettings,
                         icon: const Icon(Icons.settings_outlined),
-                        label: const Text('Allow installs'),
+                        label: Text(strings.allowInstalls),
                       ),
                       const SizedBox(height: 8),
                     ],
                     FilledButton.icon(
                       onPressed: () => onDownload(info),
                       icon: const Icon(Icons.download_rounded),
-                      label: const Text('Download & Install'),
+                      label: Text(strings.downloadInstall),
                     ),
                   ],
                 ],
@@ -432,52 +481,6 @@ class _StatusLine extends StatelessWidget {
           Expanded(child: Text(text)),
         ],
       ),
-    );
-  }
-}
-
-/// Shows the notification permission state and lets the user fix it.
-/// Playback works regardless — this only gates background/lock-screen
-/// controls, which is exactly what the copy says.
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final (icon, title, subtitle) = switch (state.notificationPhase) {
-      NotificationPhase.granted => (
-          Icons.notifications_active_outlined,
-          'Background controls on',
-          'Playback controls show on the lock screen and in notifications.',
-        ),
-      NotificationPhase.permanentlyDenied => (
-          Icons.notifications_off_outlined,
-          'Background controls off',
-          'Music still plays. Enable notifications in system settings for lock-screen controls.',
-        ),
-      _ => (
-          Icons.notifications_outlined,
-          'Background controls off',
-          'Music still plays. Turn on notifications for lock-screen controls.',
-        ),
-    };
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: state.notificationPhase == NotificationPhase.granted
-          ? const Icon(Icons.check_circle_outline_rounded)
-          : const Icon(Icons.chevron_right_rounded),
-      onTap: () async {
-        if (state.notificationPhase ==
-            NotificationPhase.permanentlyDenied) {
-          await state.openAppSettings();
-          await state.refreshNotificationState();
-        } else {
-          await state.requestNotifications();
-        }
-      },
     );
   }
 }

@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// In-app updates for the sideloaded Timbre APK (no Play Store).
 ///
 /// Source of truth is GitHub Releases on `amworx/timbre`:
@@ -181,32 +183,30 @@ UpdateInfo? updateInfoFromRelease(Map<String, dynamic> json) {
 }
 
 /// User-facing one-liner for an [OtaEvent] status, used by Settings.
-String describeOtaEvent(OtaEvent event) {
+String describeOtaEvent(OtaEvent event, AppLocalizations t) {
   switch (event.status) {
     case OtaStatus.DOWNLOADING:
       final pct = event.value?.trim() ?? '';
-      return pct.isEmpty ? 'Downloading update…' : 'Downloading update… $pct%';
+      return pct.isEmpty ? t.evtDownloadingPlain : t.evtDownloading(pct);
     case OtaStatus.INSTALLING:
-      return 'Download complete — opening installer…';
+      return t.evtInstalling;
     case OtaStatus.ALREADY_RUNNING_ERROR:
-      return 'An update is already running.';
+      return t.evtRunning;
     case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
-      return 'Install permission was denied.';
+      return t.evtPermDenied;
     case OtaStatus.DOWNLOAD_ERROR:
-      return 'Download failed. Check your connection and retry.';
+      return t.evtDownloadError;
     case OtaStatus.CHECKSUM_ERROR:
-      return 'Downloaded file failed integrity check. Retry.';
+      return t.evtChecksumError;
     case OtaStatus.CANCELED:
-      return 'Download canceled.';
+      return t.evtCanceled;
     case OtaStatus.INSTALLATION_ERROR:
-      return 'Installation reported an error.';
+      return t.evtInstallError;
     case OtaStatus.INSTALLATION_DONE:
-      return 'Installed.';
+      return t.evtInstalled;
     case OtaStatus.INTERNAL_ERROR:
       final detail = event.value?.trim() ?? '';
-      return detail.isEmpty
-          ? 'Something went wrong. Please retry.'
-          : 'Something went wrong: $detail';
+      return detail.isEmpty ? t.evtInternal : t.evtInternalDetail(detail);
   }
 }
 
@@ -222,8 +222,8 @@ class AppUpdater {
 
   /// Returns whether a newer release exists. Never throws: transport,
   /// protocol, and payload problems become [UpdateCheckFailed] with a
-  /// message safe to display.
-  Future<UpdateCheckResult> checkForUpdate() async {
+  /// message safe to display (in the caller's language, via [t]).
+  Future<UpdateCheckResult> checkForUpdate(AppLocalizations t) async {
     final current = await _currentVersion();
     late http.Response res;
     try {
@@ -235,48 +235,39 @@ class AppUpdater {
         },
       ).timeout(const Duration(seconds: 12));
     } on TimeoutException {
-      return const UpdateCheckFailed(
-          'Update check timed out. Check your connection and retry.');
+      return UpdateCheckFailed(t.errTimeout);
     } on SocketException {
-      return const UpdateCheckFailed(
-          'No connection. Connect to the internet and retry.');
+      return UpdateCheckFailed(t.errNoConnection);
     } on HttpException {
-      return const UpdateCheckFailed(
-          'Network error. Check your connection and retry.');
+      return UpdateCheckFailed(t.errNetwork);
     } catch (_) {
-      return const UpdateCheckFailed(
-          'Could not check for updates. Please retry.');
+      return UpdateCheckFailed(t.errGeneric);
     }
 
     if (res.statusCode == 404) {
-      return const UpdateCheckFailed('No releases published yet.');
+      return UpdateCheckFailed(t.errNoReleases);
     }
     if (res.statusCode == 403) {
-      return const UpdateCheckFailed(
-          'GitHub rate limit reached. Try again later.');
+      return UpdateCheckFailed(t.errRateLimit);
     }
     if (res.statusCode != 200) {
-      return UpdateCheckFailed(
-          'Update check failed (HTTP ${res.statusCode}). Please retry.');
+      return UpdateCheckFailed(t.errHttp(res.statusCode));
     }
 
     late Map<String, dynamic> json;
     try {
       final decoded = jsonDecode(res.body);
       if (decoded is! Map<String, dynamic>) {
-        return const UpdateCheckFailed(
-            'Unexpected update response. Please retry.');
+        return UpdateCheckFailed(t.errUnexpected);
       }
       json = decoded;
     } catch (_) {
-      return const UpdateCheckFailed(
-          'Unexpected update response. Please retry.');
+      return UpdateCheckFailed(t.errUnexpected);
     }
 
     final info = updateInfoFromRelease(json);
     if (info == null) {
-      return const UpdateCheckFailed(
-          'Latest release has no installable APK.');
+      return UpdateCheckFailed(t.errNoApk);
     }
     if (compareVersions(info.version, current) <= 0) {
       return UpdateNotAvailable(current);

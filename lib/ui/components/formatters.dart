@@ -1,4 +1,7 @@
-/// Formatting helpers shared across screens.
+import '../../l10n/app_localizations.dart';
+
+/// Formatting helpers shared across screens. Durations are plain numbers
+/// (locale-independent); every word around them comes from [AppLocalizations].
 String formatDuration(Duration d) {
   final h = d.inHours;
   final m = d.inMinutes.remainder(60);
@@ -10,17 +13,13 @@ String formatDuration(Duration d) {
 
 String formatDurationMs(int ms) => formatDuration(Duration(milliseconds: ms));
 
-String remainingLabel(int remainingMs) =>
-    '${formatDurationMs(remainingMs)} remaining';
+String remainingLabel(AppLocalizations t, int remainingMs) =>
+    '${formatDurationMs(remainingMs)} ${t.remainingWord}';
 
-/// "2 h 14 min" style total duration for albums/queues.
-String formatTotalDuration(int ms) {
+/// Album/queue totals, e.g. "2 h 30 min" / "٩ دقيقة" equivalents.
+String formatTotalDuration(AppLocalizations t, int ms) {
   final d = Duration(milliseconds: ms);
-  final h = d.inHours;
-  final m = d.inMinutes.remainder(60);
-  if (h > 0) return '$h h $m min';
-  return '$m min';
+  return t.totalDuration(d.inHours, d.inMinutes.remainder(60));
 }
 
-String songsLabel(int count) =>
-    '$count ${count == 1 ? 'song' : 'songs'}';
+String songsLabel(AppLocalizations t, int count) => t.songsCount(count);

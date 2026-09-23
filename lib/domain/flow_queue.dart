@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../l10n/app_localizations.dart';
 import 'models.dart';
 
 /// Local listening-memory snapshot used to score Flow candidates.
@@ -97,13 +98,15 @@ class FlowQueue {
   }
 
   /// Human-readable explanation shown under the Flow title.
-  static String explanation(Song current, ListeningSnapshot snapshot) {
+  /// Takes the locale's strings so the UI owns the language.
+  static String explanation(
+      Song current, ListeningSnapshot snapshot, AppLocalizations t) {
     final hasFavorites = snapshot.favoriteIds.isNotEmpty;
     final stat = snapshot.stats[current.id];
     final known = stat != null && stat.playCount > 0;
-    if (hasFavorites && known) return 'Similar artist + recent favorites';
-    if (hasFavorites) return 'Similar artist + your favorites';
-    if (known) return 'Built from this artist and your listening';
-    return 'Built from your library';
+    if (hasFavorites && known) return t.flowRecent;
+    if (hasFavorites) return t.flowSocial;
+    if (known) return t.flowArtist;
+    return t.flowPlain;
   }
 }

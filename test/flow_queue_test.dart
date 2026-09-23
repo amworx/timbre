@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timbre/domain/flow_queue.dart';
 import 'package:timbre/domain/models.dart';
+import 'package:timbre/l10n/app_localizations.dart';
 
 Song _song(int id, {String? artistId, String? albumId, String? genre}) => Song(
       id: id,
@@ -108,16 +110,19 @@ void main() {
     expect(result.first.id, fresh.id);
   });
 
-  test('explanation reflects listening state', () {
+  test('explanation reflects listening state', () async {
+    final t =
+        await AppLocalizations.delegate.load(const Locale('en'));
     final song = _song(1);
     expect(
-      FlowQueue.explanation(song, ListeningSnapshot.empty),
+      FlowQueue.explanation(song, ListeningSnapshot.empty, t),
       'Built from your library',
     );
     expect(
       FlowQueue.explanation(
         song,
         const ListeningSnapshot(stats: {}, favoriteIds: {5}),
+        t,
       ),
       'Similar artist + your favorites',
     );

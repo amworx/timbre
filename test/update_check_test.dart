@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ota_update/ota_update.dart';
+import 'package:timbre/l10n/app_localizations.dart';
 import 'package:timbre/update/app_updater.dart';
+
+Future<AppLocalizations> enStrings() =>
+    AppLocalizations.delegate.load(const Locale('en'));
 
 Map<String, dynamic> release({
   String tag = 'v1.0.1',
@@ -149,7 +154,7 @@ void main() {
         clientFor((_) => http.Response(jsonEncode(release()), 200)),
         '1.0.0',
       );
-      final res = await u.checkForUpdate();
+      final res = await u.checkForUpdate(await enStrings());
       expect(res, isA<UpdateAvailable>());
       expect((res as UpdateAvailable).info.version, '1.0.1');
     });
@@ -160,7 +165,7 @@ void main() {
           clientFor((_) => http.Response(jsonEncode(release()), 200)),
           current,
         );
-        expect(await u.checkForUpdate(), isA<UpdateNotAvailable>());
+        expect(await u.checkForUpdate(await enStrings()), isA<UpdateNotAvailable>());
       }
     });
 
@@ -175,7 +180,7 @@ void main() {
           clientFor((_) => http.Response('x', entry.key)),
           '1.0.0',
         );
-        final res = await u.checkForUpdate();
+        final res = await u.checkForUpdate(await enStrings());
         expect(res, isA<UpdateCheckFailed>());
         expect((res as UpdateCheckFailed).message, entry.value);
       }
@@ -190,7 +195,7 @@ void main() {
             200)),
       ];
       for (final c in bad) {
-        final res = await updater(c, '1.0.0').checkForUpdate();
+        final res = await updater(c, '1.0.0').checkForUpdate(await enStrings());
         expect(res, isA<UpdateCheckFailed>());
       }
     });
@@ -200,28 +205,30 @@ void main() {
         MockClient((_) => throw const SocketException('down')),
         '1.0.0',
       );
-      final res = await u.checkForUpdate();
+      final res = await u.checkForUpdate(await enStrings());
       expect(res, isA<UpdateCheckFailed>());
       expect((res as UpdateCheckFailed).message, contains('No connection'));
     });
   });
 
   group('describeOtaEvent', () {
-    test('narrates download/install progress without crashing', () {
+    test('narrates download/install progress without crashing', () async {
+      final t = await enStrings();
       expect(
-        describeOtaEvent(OtaEvent(OtaStatus.DOWNLOADING, '42')),
+        describeOtaEvent(OtaEvent(OtaStatus.DOWNLOADING, '42'), t),
         contains('42%'),
       );
       expect(
-        describeOtaEvent(OtaEvent(OtaStatus.INSTALLING, null)),
+        describeOtaEvent(OtaEvent(OtaStatus.INSTALLING, null), t),
         contains('installer'),
       );
       expect(
-        describeOtaEvent(OtaEvent(OtaStatus.PERMISSION_NOT_GRANTED_ERROR, null)),
+        describeOtaEvent(
+            OtaEvent(OtaStatus.PERMISSION_NOT_GRANTED_ERROR, null), t),
         isNotEmpty,
       );
       expect(
-        describeOtaEvent(OtaEvent(OtaStatus.INTERNAL_ERROR, 'boom')),
+        describeOtaEvent(OtaEvent(OtaStatus.INTERNAL_ERROR, 'boom'), t),
         contains('boom'),
       );
     });

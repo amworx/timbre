@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../theme/timbre_theme.dart';
 import 'artwork.dart';
@@ -39,6 +40,7 @@ class SongRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final cs = Theme.of(context).colorScheme;
+    final strings = t(context);
     final isCurrent = state.currentSong?.id == song.id;
     final fav = state.favoriteIds.contains(song.id);
 
@@ -68,7 +70,7 @@ class SongRow extends StatelessWidget {
         ),
       ),
       subtitle: Text(
-        '${song.artist} · ${formatDurationMs(song.durationMs)}',
+        '${displayArtist(song, strings)} · ${formatDurationMs(song.durationMs)}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
@@ -85,7 +87,7 @@ class SongRow extends StatelessWidget {
               ),
             ),
           IconButton(
-            tooltip: fav ? 'Remove from favorites' : 'Add to favorites',
+            tooltip: fav ? strings.tipRemoveFav : strings.tipAddFav,
             icon: Icon(
               fav ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
               size: 22,
@@ -95,7 +97,7 @@ class SongRow extends StatelessWidget {
                 context.read<AppState>().toggleFavorite(song),
           ),
           IconButton(
-            tooltip: 'More actions',
+            tooltip: strings.tipMore,
             icon: Icon(Icons.more_vert_rounded,
                 size: 22, color: cs.onSurfaceVariant),
             onPressed: () => showSongActions(context, song),

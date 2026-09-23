@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/l10n_ext.dart';
 import '../navigation/app_navigator.dart';
 
 import '../../state/app_state.dart';
@@ -23,11 +24,14 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _tab = 0;
 
-  static const _destinations = [
-    (icon: Icons.radio_outlined, selectedIcon: Icons.radio, label: 'GUIDE'),
-    (icon: Icons.tune, selectedIcon: Icons.tune, label: 'ARCHIVE'),
-    (icon: Icons.format_list_bulleted_outlined, selectedIcon: Icons.format_list_bulleted, label: 'BANK'),
-    (icon: Icons.search_outlined, selectedIcon: Icons.search, label: 'SCAN'),
+  static const _icons = [
+    (icon: Icons.radio_outlined, selectedIcon: Icons.radio),
+    (icon: Icons.tune, selectedIcon: Icons.tune),
+    (
+      icon: Icons.format_list_bulleted_outlined,
+      selectedIcon: Icons.format_list_bulleted
+    ),
+    (icon: Icons.search_outlined, selectedIcon: Icons.search),
   ];
 
   void _onTabEvent() {
@@ -54,6 +58,13 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = t(context);
+    final labels = [
+      strings.tabGuide,
+      strings.tabArchive,
+      strings.tabBank,
+      strings.tabScan,
+    ];
     return _PermissionGate(
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -86,11 +97,11 @@ class _AppShellState extends State<AppShell> {
                     selectedIndex: _tab,
                     onDestinationSelected: (i) => setState(() => _tab = i),
                     destinations: [
-                      for (final d in _destinations)
+                      for (var i = 0; i < _icons.length; i++)
                         NavigationDestination(
-                          icon: Icon(d.icon),
-                          selectedIcon: Icon(d.selectedIcon),
-                          label: d.label,
+                          icon: Icon(_icons[i].icon),
+                          selectedIcon: Icon(_icons[i].selectedIcon),
+                          label: labels[i],
                         ),
                     ],
                   ),
@@ -115,6 +126,7 @@ class _PermissionGate extends StatelessWidget {
     final state = context.watch<AppState>();
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final strings = t(context);
 
     switch (state.permissionPhase) {
       case PermissionPhase.unknown:
@@ -128,10 +140,11 @@ class _PermissionGate extends StatelessWidget {
                 children: [
                   Text('TIMBRE FM', style: TimbreText.kicker(context)),
                   const SizedBox(height: TimbreSpacing.lg),
-                  Text('NO SIGNAL', style: TimbreText.dial(context, size: 30)),
+                  Text(strings.gateNoSignal,
+                      style: TimbreText.dial(context, size: 30)),
                   const SizedBox(height: TimbreSpacing.md),
                   Text(
-                    'Your music stays on your device.\nGrant audio access so the receiver can scan your library.',
+                    strings.gateBody,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: cs.onSurfaceVariant, height: 1.6),
                   ),
@@ -141,12 +154,12 @@ class _PermissionGate extends StatelessWidget {
                       final granted = await state.requestPermission();
                       if (granted) await state.scanLibrary();
                     },
-                    child: const Text('SCAN FOR STATIONS'),
+                    child: Text(strings.gateScanCta),
                   ),
                   if (state.permissionPhase == PermissionPhase.denied) ...[
                     const SizedBox(height: TimbreSpacing.sm),
                     Text(
-                      'Timbre cannot browse or play music without this permission.',
+                      strings.gateDeniedNote,
                       style: TextStyle(
                           color: cs.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 12),
                     ),
@@ -160,10 +173,9 @@ class _PermissionGate extends StatelessWidget {
         return Scaffold(
           body: EmptyState(
             icon: Icons.lock_outline_rounded,
-            title: 'Access is off',
-            body: 'Timbre needs permission to read audio files. '
-                'Enable it in system settings, then come back.',
-            actionLabel: 'Open settings',
+            title: strings.gateAccessOff,
+            body: strings.gateAccessBody,
+            actionLabel: strings.gateOpenSettings,
             onAction: () => state.openAppSettings(),
           ),
         );

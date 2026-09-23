@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/app_state.dart';
+import '../../l10n/l10n_ext.dart';
 import '../components/empty_state.dart';
 import '../components/song_row.dart';
 import '../theme/timbre_theme.dart';
@@ -16,30 +17,34 @@ class QueueScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final queue = state.queue;
     final currentSong = state.currentSong;
+    final strings = t(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Queue'),
+        title: Text(strings.queueTitle),
         actions: [
           if (queue.isNotEmpty)
             IconButton(
-              tooltip: 'Clear queue',
+              tooltip: strings.tipClearQueue,
               icon: const Icon(Icons.playlist_remove_rounded),
               onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Clear queue?'),
-                    content: const Text('This stops playback and empties the queue.'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancel')),
-                      FilledButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Clear')),
-                    ],
-                  ),
+                  builder: (context) {
+                    final strings = t(context);
+                    return AlertDialog(
+                      title: Text(strings.clearQueueTitle),
+                      content: Text(strings.clearQueueBody),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: Text(strings.cancel)),
+                        FilledButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: Text(strings.clear)),
+                      ],
+                    );
+                  },
                 );
                 if (confirmed == true && context.mounted) {
                   await context.read<AppState>().clearQueue();
@@ -50,10 +55,10 @@ class QueueScreen extends StatelessWidget {
         ],
       ),
       body: queue.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.queue_music_outlined,
-              title: 'Queue is empty',
-              body: 'Play a song to build a queue.',
+              title: strings.queueEmptyTitle,
+              body: strings.queueEmptyBody,
             )
           : SafeArea(
               child: ReorderableListView.builder(
@@ -77,7 +82,7 @@ class QueueScreen extends StatelessWidget {
                         children: [
                           Padding(
                             padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
-                            child: Text('NOW PLAYING',
+                            child: Text(strings.nowPlaying,
                                 style: TextStyle(
                                     fontSize: 11,
                                     letterSpacing: 1.2,
@@ -92,7 +97,7 @@ class QueueScreen extends StatelessWidget {
                           ),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
-                            child: Text('UP NEXT',
+                            child: Text(strings.upNext,
                                 style: TextStyle(
                                     fontSize: 11,
                                     letterSpacing: 1.2,

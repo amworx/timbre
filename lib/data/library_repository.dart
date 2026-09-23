@@ -81,8 +81,8 @@ class LibraryRepository {
       return Song(
         id: m.id,
         title: title,
-        artist: _clean(m.artist, 'Unknown artist'),
-        album: _clean(m.album, 'Unknown album'),
+        artist: _clean(m.artist, kUnknownArtist),
+        album: _clean(m.album, kUnknownAlbum),
         albumArtist: null,
         genre: _cleanOrNull(m.genre),
         durationMs: m.duration ?? 0,

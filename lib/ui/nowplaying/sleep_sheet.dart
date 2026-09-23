@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 
 /// Sleep timer sheet: 15/30/45/60 min, end of track, cancel.
@@ -18,6 +20,7 @@ class _SleepSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final remaining = state.sleepRemainingMs;
+    final strings = t(context);
 
     return SafeArea(
       child: Column(
@@ -27,7 +30,7 @@ class _SleepSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Align(
               alignment: AlignmentDirectional.centerStart,
-              child: Text('Sleep timer',
+              child: Text(strings.sleepTitle,
                   style: Theme.of(context).textTheme.titleMedium),
             ),
           ),
@@ -35,21 +38,21 @@ class _SleepSheet extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.bedtime_rounded),
               title: Text(remaining == -1
-                  ? 'Will pause at the end of this track'
-                  : 'Pausing in ${remainingLabel(remaining)}'),
+                  ? strings.sleepWillPauseEnd
+                  : strings.sleepPausingIn(_remainingText(strings, remaining))),
               trailing: TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                   state.cancelSleepTimer();
                 },
-                child: const Text('Cancel'),
+                child: Text(strings.cancel),
               ),
             ),
           const Divider(height: 1),
           for (final minutes in const [15, 30, 45, 60])
             ListTile(
               leading: const Icon(Icons.timer_outlined),
-              title: Text('$minutes minutes'),
+              title: Text(strings.minutesCount(minutes)),
               onTap: () {
                 Navigator.pop(context);
                 state.startSleepTimer(minutes);
@@ -57,7 +60,7 @@ class _SleepSheet extends StatelessWidget {
             ),
           ListTile(
             leading: const Icon(Icons.skip_next_rounded),
-            title: const Text('End of current track'),
+            title: Text(strings.sleepEndOfTrack),
             onTap: () {
               Navigator.pop(context);
               state.sleepAtEndOfTrack();
@@ -70,13 +73,11 @@ class _SleepSheet extends StatelessWidget {
   }
 }
 
-String remainingLabel(int remainingMs) =>
-    '${_fmt(remainingMs)} remaining';
-
-String _fmt(int ms) {
+String _remainingText(AppLocalizations strings, int ms) {
   final totalSeconds = (ms / 1000).round();
   final m = totalSeconds ~/ 60;
-  final s = totalSeconds % 60;
-  if (m > 0) return '$m min ${s.toString().padLeft(2, '0')} s';
-  return '$s s';
+  if (m > 0) {
+    return strings.remainingShort(m, (totalSeconds % 60).toString().padLeft(2, '0'));
+  }
+  return strings.secondsShort(totalSeconds);
 }

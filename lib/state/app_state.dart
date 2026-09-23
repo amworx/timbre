@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/library_repository.dart';
 import '../domain/flow_queue.dart';
 import '../domain/models.dart';
+import '../l10n/app_localizations.dart';
 import '../media/media_files.dart';
 import '../playback/timbre_audio_handler.dart';
 import 'notification_permission.dart';
@@ -277,7 +278,8 @@ class AppState extends ChangeNotifier {
   // ------------------------------------------------------------------
 
   /// Starts a deterministic Flow queue seeded from [song].
-  Future<void> startFlow(Song song) async {
+  /// The UI passes its locale strings ([t]) so queue titles translate.
+  Future<void> startFlow(Song song, AppLocalizations t) async {
     final stats = await library.loadPlayStats();
     final snapshot = ListeningSnapshot(stats: stats, favoriteIds: favoriteIds);
     final candidates = FlowQueue.build(
@@ -291,8 +293,8 @@ class AppState extends ChangeNotifier {
     await playQueue(QueueSpec(
       songs: queue,
       startIndex: 0,
-      title: 'Flow · ${song.title}',
-      subtitle: FlowQueue.explanation(song, snapshot),
+      title: t.flowQueueTitle(song.title),
+      subtitle: FlowQueue.explanation(song, snapshot, t),
     ));
   }
 
@@ -401,7 +403,8 @@ class AppState extends ChangeNotifier {
   /// Shares the audio [songs] as files through the system sheet.
   /// Returns how many were attached; [ShareOutcome.attached] == 0 means
   /// none of the files were reachable (message explains why).
-  Future<ShareOutcome> shareSongs(List<Song> songs) async {
+  Future<ShareOutcome> shareSongs(
+      List<Song> songs, AppLocalizations t) async {
     final files = <share.XFile>[];
     for (final s in songs) {
       final path = s.filePath;
@@ -418,16 +421,16 @@ class AppState extends ChangeNotifier {
       ));
     }
     if (files.isEmpty) {
-      return const ShareOutcome(
+      return ShareOutcome(
         attached: 0,
-        message: 'Audio file not available for sharing.',
+        message: t.audioNotAvailable,
       );
     }
     await share.SharePlus.instance.share(share.ShareParams(
       files: files,
       text: songs.length == 1
-          ? '${songs.first.title} — ${songs.first.artist}'
-          : '${songs.length} songs from Timbre',
+          ? t.shareOneText(songs.first.title, songs.first.artist)
+          : t.shareManyText(songs.length),
     ));
     return ShareOutcome(attached: files.length);
   }
@@ -444,11 +447,11 @@ class AppState extends ChangeNotifier {
   /// Deletes [songs] from device storage via the MediaStore consent flow,
   /// then purges every app-owned trace and refreshes the in-memory library.
   /// Never throws: per-file problems are counted in the returned summary.
-  Future<DeleteSummary> deleteSongs(List<Song> targets) async {
+  Future<DeleteSummary> deleteSongs(
+      List<Song> targets, AppLocalizations t) async {
     var deleted = 0;
     var denied = 0;
     var failed = 0;
-    String? lastMessage;
     final deletedIds = <int>{};
 
     for (final song in targets) {
@@ -459,11 +462,9 @@ class AppState extends ChangeNotifier {
           deletedIds.add(song.id);
         case MediaDeleteStatus.denied:
           denied++;
-          lastMessage = outcome.message;
         case MediaDeleteStatus.unavailable:
         case MediaDeleteStatus.failed:
           failed++;
-          lastMessage = outcome.message;
       }
     }
 
@@ -496,7 +497,9 @@ class AppState extends ChangeNotifier {
       deleted: deleted,
       denied: denied,
       failed: failed,
-      message: lastMessage,
+      message: denied > 0
+          ? t.deleteNotAllowed
+          : (failed > 0 ? t.couldNotDeleteSong : null),
     );
   }
 

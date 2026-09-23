@@ -6,6 +6,11 @@ library;
 
 import 'dart:math';
 
+/// Fallbacks stored when MediaStore has no value. Kept in English in the
+/// model; UI translates them at display time via `displayArtist`/`displayAlbum`.
+const kUnknownArtist = 'Unknown artist';
+const kUnknownAlbum = 'Unknown album';
+
 /// A single track from the device library.
 class Song {
   final int id;

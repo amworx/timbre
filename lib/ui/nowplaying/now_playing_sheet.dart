@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../state/app_state.dart';
 import '../navigation/app_navigator.dart';
+import '../../l10n/l10n_ext.dart';
 import '../components/formatters.dart';
 import '../components/song_selection.dart';
 import '../theme/timbre_theme.dart';
@@ -54,6 +55,7 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
 
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final strings = t(context);
     final duration = Duration(milliseconds: song.durationMs);
 
     return Scaffold(
@@ -71,14 +73,14 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                 child: Row(
                   children: [
                     IconButton(
-                      tooltip: 'Minimize',
+                      tooltip: strings.tipMinimize,
                       icon: Icon(Icons.keyboard_arrow_down_rounded,
                           size: 30, color: cs.onSurface),
                       onPressed: () => Navigator.pop(context),
                     ),
                     const Spacer(),
                     IconButton(
-                      tooltip: 'Queue',
+                      tooltip: strings.tipQueue,
                       icon: Icon(Icons.queue_music_outlined, color: cs.onSurface),
                       onPressed: () {
                         Navigator.pop(context);
@@ -117,12 +119,12 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                         style: theme.textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
-                    Text(song.artist,
+                    Text(displayArtist(song, strings),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15)),
-                    Text(song.album,
+                    Text(displayAlbum(song, strings),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
@@ -147,8 +149,8 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                   children: [
                     IconButton(
                       tooltip: state.favoriteIds.contains(song.id)
-                          ? 'Remove from favorites'
-                          : 'Add to favorites',
+                          ? strings.tipRemoveFav
+                          : strings.tipAddFav,
                       icon: Icon(
                         state.favoriteIds.contains(song.id)
                             ? Icons.favorite_rounded
@@ -160,35 +162,38 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                       onPressed: () => state.toggleFavorite(song),
                     ),
                     IconButton(
-                      tooltip: 'Share audio file',
+                      tooltip: strings.shareAudioFile,
                       icon: Icon(Icons.ios_share_rounded,
                           color: cs.onSurfaceVariant),
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
-                        final outcome = await state.shareSongs([song]);
+                        final outcome =
+                            await state.shareSongs([song], strings);
                         if (outcome.attached == 0 && context.mounted) {
                           messenger.showSnackBar(
                             SnackBar(
                               content: Text(
-                                  outcome.message ?? 'Nothing to share.'),
+                                  outcome.message ?? strings.nothingToShare),
                             ),
                           );
                         }
                       },
                     ),
                     IconButton(
-                      tooltip: 'Delete from device',
+                      tooltip: strings.deleteFromDevice,
                       icon: Icon(Icons.delete_outline_rounded,
                           color: cs.error),
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
                         final confirmed = await confirmDeviceDelete(
                           context,
+                          strings,
                           count: 1,
                           songTitle: song.title,
                         );
                         if (!confirmed || !context.mounted) return;
-                        final summary = await state.deleteSongs([song]);
+                        final summary =
+                            await state.deleteSongs([song], strings);
                         if (!context.mounted) return;
                         if (summary.deleted == 1) {
                           // Playback moved on (or stopped): the sheet
@@ -202,7 +207,7 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                             SnackBar(
                               content: Text(
                                 summary.message ??
-                                    'Could not delete this song.',
+                                    strings.couldNotDeleteSong,
                               ),
                             ),
                           );
@@ -210,13 +215,13 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                       },
                     ),
                     IconButton(
-                      tooltip: 'Sleep timer',
+                      tooltip: strings.tipSleep,
                       icon: Icon(Icons.bedtime_outlined,
                           color: state.sleepActive ? cs.primary : cs.onSurfaceVariant),
                       onPressed: () => showSleepSheet(context),
                     ),
                     IconButton(
-                      tooltip: 'Playback speed',
+                      tooltip: strings.tipSpeed,
                       icon: Icon(Icons.speed_rounded,
                           color: state.speed != 1.0 ? cs.primary : cs.onSurfaceVariant),
                       onPressed: () => showSpeedSheet(context),
@@ -397,6 +402,7 @@ class _Controls extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final cs = Theme.of(context).colorScheme;
+    final strings = t(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -405,13 +411,13 @@ class _Controls extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            tooltip: 'Shuffle',
+            tooltip: strings.tipShuffle,
             icon: Icon(Icons.shuffle_rounded,
                 color: state.shuffleEnabled ? cs.primary : cs.onSurfaceVariant),
             onPressed: state.toggleShuffle,
           ),
           IconButton(
-            tooltip: 'Previous',
+            tooltip: strings.tipPrevious,
             icon: Icon(Icons.skip_previous_rounded,
                 size: 40, color: cs.onSurface),
             onPressed: state.hasPrevious ? state.previous : null,
@@ -422,7 +428,7 @@ class _Controls extends StatelessWidget {
               color: cs.primary,
             ),
             child: IconButton(
-              tooltip: state.isPlaying ? 'Pause' : 'Play',
+              tooltip: state.isPlaying ? strings.tipPause : strings.tipPlay,
               iconSize: 34,
               color: cs.onPrimary,
               icon: AnimatedSwitcher(
@@ -438,15 +444,15 @@ class _Controls extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Next',
+            tooltip: strings.tipNext,
             icon: Icon(Icons.skip_next_rounded, size: 40, color: cs.onSurface),
             onPressed: state.hasNext ? state.next : null,
           ),
           IconButton(
             tooltip: switch (state.repeatMode) {
-              1 => 'Repeat all',
-              2 => 'Repeat one',
-              _ => 'Repeat off',
+              1 => strings.repeatAll,
+              2 => strings.repeatOne,
+              _ => strings.repeatOff,
             },
             icon: Stack(
               alignment: Alignment.center,

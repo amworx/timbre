@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
@@ -72,6 +73,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = t(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           TimbreSpacing.md, TimbreSpacing.sm, TimbreSpacing.sm, 0),
@@ -80,14 +82,14 @@ class _Header extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('Library',
+              Text(strings.libraryTitle,
                   style: Theme.of(context)
                       .textTheme
                       .headlineMedium
                       ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
               const Spacer(),
               IconButton(
-                tooltip: 'Refresh library',
+                tooltip: strings.tipRefresh,
                 icon: const Icon(Icons.refresh_rounded),
                 onPressed: () => context.read<AppState>().scanLibrary(),
               ),
@@ -103,11 +105,11 @@ class _Header extends StatelessWidget {
                     padding: const EdgeInsetsDirectional.only(end: TimbreSpacing.sm),
                     child: ChoiceChip(
                       label: Text(switch (t) {
-                        _LibTab.songs => 'Songs',
-                        _LibTab.albums => 'Albums',
-                        _LibTab.artists => 'Artists',
-                        _LibTab.genres => 'Genres',
-                        _LibTab.folders => 'Folders',
+                        _LibTab.songs => strings.tabSongs,
+                        _LibTab.albums => strings.tabAlbums,
+                        _LibTab.artists => strings.tabArtists,
+                        _LibTab.genres => strings.tabGenres,
+                        _LibTab.folders => strings.tabFolders,
                       }),
                       selected: tab == t,
                       onSelected: (_) => onTabChanged(t),
@@ -130,6 +132,7 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final strings = t(context);
 
     if (state.loadState == LoadState.loading && state.songs.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -138,9 +141,9 @@ class _Body extends StatelessWidget {
     if (state.loadState == LoadState.error) {
       return EmptyState(
         icon: Icons.error_outline_rounded,
-        title: 'Could not load your music',
-        body: state.loadError ?? 'Unknown error',
-        actionLabel: 'Try again',
+        title: strings.couldNotLoad,
+        body: state.loadError ?? strings.loadUnknownError,
+        actionLabel: strings.tryAgain,
         onAction: () => state.scanLibrary(),
       );
     }
@@ -148,10 +151,9 @@ class _Body extends StatelessWidget {
     if (state.permissionPhase == PermissionPhase.permanentlyDenied) {
       return EmptyState(
         icon: Icons.lock_outline_rounded,
-        title: 'Music access is off',
-        body: 'Timbre needs permission to read audio files. '
-            'Enable it in system settings to see your library.',
-        actionLabel: 'Open settings',
+        title: strings.gateAccessOff,
+        body: strings.gateAccessBody,
+        actionLabel: strings.gateOpenSettings,
         onAction: () => state.openAppSettings(),
       );
     }
@@ -159,10 +161,9 @@ class _Body extends StatelessWidget {
     if (state.songs.isEmpty) {
       return EmptyState(
         icon: Icons.music_note_outlined,
-        title: 'Your music will appear here',
-        body: 'Timbre reads your device\'s audio library. '
-            'Once music is found, it shows up instantly.',
-        actionLabel: 'Scan library',
+        title: strings.emptyLibraryTitle,
+        body: strings.emptyLibraryBody,
+        actionLabel: strings.scanLibrary,
         onAction: () => state.scanLibrary(),
       );
     }
@@ -207,12 +208,15 @@ class _SongsListState extends State<_SongsList> {
     final songs = _selectedSongs;
     if (songs.isEmpty) return;
     setState(() => _busy = true);
-    final outcome = await context.read<AppState>().shareSongs(songs);
+    final outcome =
+        await context.read<AppState>().shareSongs(songs, t(context));
     if (!mounted) return;
     setState(() => _busy = false);
     if (outcome.attached == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(outcome.message ?? 'Nothing to share.')),
+        SnackBar(
+            content: Text(
+                outcome.message ?? t(context).nothingToShare)),
       );
     } else {
       _selection.clear();
@@ -222,21 +226,19 @@ class _SongsListState extends State<_SongsList> {
   Future<void> _deleteSelected() async {
     final songs = _selectedSongs;
     if (songs.isEmpty) return;
-    final confirmed = await confirmDeviceDelete(context, count: songs.length);
+    final strings = t(context);
+    final confirmed =
+        await confirmDeviceDelete(context, strings, count: songs.length);
     if (!confirmed || !mounted) return;
     setState(() => _busy = true);
-    final summary = await context.read<AppState>().deleteSongs(songs);
+    final summary =
+        await context.read<AppState>().deleteSongs(songs, strings);
     if (!mounted) return;
     setState(() => _busy = false);
     _selection.clear();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          summary.deleted == songs.length
-              ? 'Deleted ${summary.deleted}.'
-              : 'Deleted ${summary.deleted} of ${songs.length}.'
-                  '${summary.message == null ? '' : ' ${summary.message}'}',
-        ),
+        content: Text(deleteResultText(strings, summary, songs.length)),
       ),
     );
   }
@@ -334,7 +336,10 @@ class _AlbumsGrid extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-              Text(album.artist,
+              Text(
+                  album.artist == kUnknownArtist
+                      ? t(context).unknownArtist
+                      : album.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -374,7 +379,7 @@ class _ArtistsList extends StatelessWidget {
             ),
           ),
           title: Text(artist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(songsLabel(artist.songCount)),
+          subtitle: Text(songsLabel(t(context), artist.songCount)),
           trailing: Icon(Icons.chevron_right_rounded,
               color: Theme.of(context).colorScheme.onSurfaceVariant),
           onTap: () => AppNavigator.openArtist(context, artist.id, artist.name),
@@ -407,7 +412,7 @@ class _GenresList extends StatelessWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           title: Text(genre.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(songsLabel(genre.songCount)),
+          subtitle: Text(songsLabel(t(context), genre.songCount)),
           trailing: Icon(Icons.chevron_right_rounded,
               color: Theme.of(context).colorScheme.onSurfaceVariant),
           onTap: () => AppNavigator.openGenre(context, genre.name),
@@ -444,7 +449,7 @@ class _FoldersList extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11)),
-          trailing: Text(songsLabel(folder.songCount),
+          trailing: Text(songsLabel(t(context), folder.songCount),
               style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant)),

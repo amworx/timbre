@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/library_repository.dart';
+import 'l10n/app_localizations.dart';
 import 'playback/timbre_audio_handler.dart';
 import 'state/app_state.dart';
 import 'ui/detail/detail_screen.dart';
@@ -86,6 +87,7 @@ class TimbreApp extends StatelessWidget {
           darkTheme: TimbreTheme.dark(),
           themeMode: themeController.mode,
           localizationsDelegates: const [
+            AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,

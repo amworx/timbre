@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/l10n_ext.dart';
+import '../../state/app_state.dart';
+
 /// Per-list multi-select state (bulk actions). Owned by the list screen,
 /// never global: leaving the list drops the instance and the selection.
 class SongSelection extends ChangeNotifier {
@@ -73,6 +77,7 @@ class SelectionActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final strings = t(context);
     return AnimatedSlide(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
@@ -92,7 +97,7 @@ class SelectionActionBar extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Clear selection',
+                    tooltip: strings.tipClearSelection,
                     onPressed: busy ? null : onClose,
                     icon: Icon(Icons.close_rounded,
                         color: cs.onInverseSurface),
@@ -101,8 +106,8 @@ class SelectionActionBar extends StatelessWidget {
                     onTap: busy ? null : onSelectAll,
                     child: Text(
                       selectedCount == totalCount && totalCount > 0
-                          ? 'All $totalCount'
-                          : '$selectedCount · All',
+                          ? strings.selAllTotal(totalCount)
+                          : strings.selCountAll(selectedCount),
                       style: TextStyle(
                         color: cs.onInverseSurface,
                         fontWeight: FontWeight.w600,
@@ -111,19 +116,19 @@ class SelectionActionBar extends StatelessWidget {
                   ),
                   const Spacer(),
                   IconButton(
-                    tooltip: 'Share',
+                    tooltip: strings.tipShare,
                     onPressed: busy ? null : onShare,
                     icon: Icon(Icons.ios_share_rounded,
                         color: cs.onInverseSurface),
                   ),
                   IconButton(
-                    tooltip: 'Add to playlist',
+                    tooltip: strings.tipAddToPlaylist,
                     onPressed: busy ? null : onAddToPlaylist,
                     icon: Icon(Icons.playlist_add_rounded,
                         color: cs.onInverseSurface),
                   ),
                   IconButton(
-                    tooltip: 'Delete from device',
+                    tooltip: strings.tipDelete,
                     onPressed: busy ? null : onDelete,
                     icon: Icon(Icons.delete_outline_rounded,
                         color: cs.error),
@@ -141,34 +146,43 @@ class SelectionActionBar extends StatelessWidget {
 /// Confirms a device-file delete. Returns true when the user accepts.
 /// [count] == 1 names the song; otherwise the count is shown.
 Future<bool> confirmDeviceDelete(
-  BuildContext context, {
+  BuildContext context,
+  AppLocalizations t, {
   required int count,
   String? songTitle,
 }) async {
   final title = count == 1 && songTitle != null
-      ? 'Delete “$songTitle” from this device?'
-      : 'Delete $count songs from this device?';
+      ? t.deleteOneTitle(songTitle)
+      : t.deleteManyTitle(count);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Delete from device?'),
+      title: Text(t.confirmDeleteTitle),
       content: Text(
-        '$title\n\nThe audio files will be permanently removed.',
+        '$title\n\n${t.deleteBody}',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(t.cancel),
         ),
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Delete'),
+          child: Text(t.delete),
         ),
       ],
     ),
   );
   return confirmed == true;
+}
+
+/// One-line snackbar text for a bulk/single delete result.
+String deleteResultText(
+    AppLocalizations t, DeleteSummary summary, int total) {
+  if (summary.deleted == total) return t.deletedAll(summary.deleted);
+  if (summary.deleted > 0) return t.deletedPartial(summary.deleted, total);
+  return summary.message ?? t.couldNotDeleteSong;
 }

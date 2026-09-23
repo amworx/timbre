@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
@@ -42,6 +43,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final cs = Theme.of(context).colorScheme;
+    final strings = t(context);
     final results = _query.isEmpty ? null : _search(state, _query);
 
     return Scaffold(
@@ -56,12 +58,12 @@ class _SearchScreenState extends State<SearchScreen> {
               child: SearchBar(
                 controller: _controller,
                 focusNode: _focus,
-                hintText: 'Search songs, artists, albums…',
+                hintText: strings.searchHint,
                 leading: Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
                 trailing: [
                   if (_query.isNotEmpty)
                     IconButton(
-                      tooltip: 'Clear',
+                      tooltip: strings.tipClear,
                       icon: const Icon(Icons.close_rounded),
                       onPressed: () {
                         _controller.clear();
@@ -128,10 +130,10 @@ class _IdleSuggestions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.songs.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.search_rounded,
-        title: 'Nothing to search yet',
-        body: 'Your library is empty. Scan your music first.',
+        title: t(context).nothingToSearchTitle,
+        body: t(context).nothingToSearchBody,
       );
     }
     final suggestions = state.songs.take(6).toList(growable: false);
@@ -140,7 +142,7 @@ class _IdleSuggestions extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: TimbreSpacing.md),
-          child: Text('Browse your library',
+          child: Text(t(context).browseLibrary,
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
@@ -163,17 +165,17 @@ class _Results extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (results.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.search_off_rounded,
-        title: 'Nothing found',
-        body: 'Try another song, artist, or album.',
+        title: t(context).nothingFoundTitle,
+        body: t(context).nothingFoundBody,
       );
     }
     return ListView(
       padding: const EdgeInsets.only(top: TimbreSpacing.sm, bottom: 140),
       children: [
         if (results.artists.isNotEmpty) ...[
-          _SectionTitle('Artists'),
+          _SectionTitle(t(context).secArtists),
           for (final a in results.artists.take(4))
             ListTile(
               contentPadding:
@@ -185,12 +187,12 @@ class _Results extends StatelessWidget {
                 child: Text(a.name.isNotEmpty ? a.name.characters.first : '?'),
               ),
               title: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(songsLabel(a.songCount)),
+              subtitle: Text(songsLabel(t(context), a.songCount)),
               onTap: () => AppNavigator.openArtist(context, a.id, a.name),
             ),
         ],
         if (results.albums.isNotEmpty) ...[
-          _SectionTitle('Albums'),
+          _SectionTitle(t(context).secAlbums),
           SizedBox(
             height: 148,
             child: ListView.separated(
@@ -225,7 +227,7 @@ class _Results extends StatelessWidget {
           ),
         ],
         if (results.genres.isNotEmpty) ...[
-          _SectionTitle('Genres'),
+          _SectionTitle(t(context).secGenres),
           for (final g in results.genres.take(4))
             ListTile(
               contentPadding:
@@ -233,12 +235,12 @@ class _Results extends StatelessWidget {
               leading: Icon(Icons.piano_rounded,
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
               title: Text(g.name),
-              subtitle: Text(songsLabel(g.songCount)),
+              subtitle: Text(songsLabel(t(context), g.songCount)),
               onTap: () => AppNavigator.openGenre(context, g.name),
             ),
         ],
         if (results.songs.isNotEmpty) ...[
-          _SectionTitle('Songs'),
+          _SectionTitle(t(context).secSongs),
           for (final s in results.songs.take(30))
             SongRow(key: ValueKey(s.id), song: s, queueContext: results.songs),
         ],

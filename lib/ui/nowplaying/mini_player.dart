@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/app_state.dart';
+import '../../l10n/l10n_ext.dart';
 import '../components/artwork.dart';
 import '../icons/broadcast_icons.dart';
 import '../navigation/app_navigator.dart';
@@ -19,6 +20,8 @@ class MiniPlayer extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     if (song == null) return const SizedBox.shrink();
+
+    final strings = t(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -54,7 +57,7 @@ class MiniPlayer extends StatelessWidget {
                               letterSpacing: 1.2,
                               color: cs.primary)),
                       const SizedBox(height: 2),
-                      Text(song.artist,
+                      Text(displayArtist(song, t(context)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -65,7 +68,8 @@ class MiniPlayer extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: state.isPlaying ? 'Pause' : 'Play',
+                  tooltip:
+                      state.isPlaying ? strings.tipPause : strings.tipPlay,
                   icon: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 160),
                     transitionBuilder: (child, anim) => ScaleTransition(
@@ -83,7 +87,7 @@ class MiniPlayer extends StatelessWidget {
                   onPressed: state.togglePlayPause,
                 ),
                 IconButton(
-                  tooltip: 'Next',
+                  tooltip: strings.tipNext,
                   icon: BIcon(BIcons.next, size: 22, color: cs.onSurface),
                   onPressed: state.hasNext ? state.next : null,
                 ),

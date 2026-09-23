@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/app_state.dart';
+import '../../l10n/l10n_ext.dart';
 import '../components/empty_state.dart';
 import '../components/formatters.dart';
 import '../navigation/app_navigator.dart';
@@ -14,6 +15,7 @@ class PlaylistsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final strings = t(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -27,14 +29,14 @@ class PlaylistsScreen extends StatelessWidget {
                   TimbreSpacing.md, TimbreSpacing.sm, TimbreSpacing.sm, 0),
               child: Row(
                 children: [
-                  Text('Playlists',
+                  Text(strings.playlistsTitle,
                       style: Theme.of(context)
                           .textTheme
                           .headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
                   const Spacer(),
                   IconButton(
-                    tooltip: 'New playlist',
+                    tooltip: strings.tipNewPlaylist,
                     icon: const Icon(Icons.add_rounded),
                     onPressed: () => _createPlaylist(context),
                   ),
@@ -45,9 +47,9 @@ class PlaylistsScreen extends StatelessWidget {
               child: state.playlists.isEmpty && state.favoriteSongs.isEmpty
                   ? EmptyState(
                       icon: Icons.queue_music_rounded,
-                      title: 'No playlists yet',
-                      body: 'Make a playlist for your next listening session.',
-                      actionLabel: 'New playlist',
+                      title: strings.emptyPlaylistsTitle,
+                      body: strings.emptyPlaylistsBody,
+                      actionLabel: strings.tipNewPlaylist,
                       onAction: () => _createPlaylist(context),
                     )
                   : ListView(
@@ -71,10 +73,10 @@ class PlaylistsScreen extends StatelessWidget {
                                 color:
                                     Theme.of(context).colorScheme.primary),
                           ),
-                          title: const Text('Favorites',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text(
-                              songsLabel(state.favoriteSongs.length)),
+                          title: Text(strings.favorites,
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(songsLabel(
+                              strings, state.favoriteSongs.length)),
                           onTap: () => _openFavorites(context),
                         ),
                         const SizedBox(height: TimbreSpacing.xs),
@@ -93,21 +95,24 @@ class PlaylistsScreen extends StatelessWidget {
                             confirmDismiss: (_) async {
                               return await showDialog<bool>(
                                 context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text('Delete "${pl.name}"?'),
-                                  content: const Text(
-                                      'Songs stay in your library. This only removes the playlist.'),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Cancel')),
-                                    FilledButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text('Delete')),
-                                  ],
-                                ),
+                                builder: (context) {
+                              final strings = t(context);
+                              return AlertDialog(
+                                title:
+                                    Text(strings.deletePlaylistTitle(pl.name)),
+                                content: Text(strings.deletePlaylistBody),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: Text(strings.cancel)),
+                                  FilledButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      child: Text(strings.delete)),
+                                ],
+                              );
+                            },
                               );
                             },
                             onDismissed: (_) {
@@ -135,9 +140,10 @@ class PlaylistsScreen extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600)),
-                              subtitle: Text(songsLabel(pl.songCount)),
+                              subtitle: Text(
+                                  songsLabel(strings, pl.songCount)),
                               trailing: IconButton(
-                                tooltip: 'Rename',
+                                tooltip: strings.tipRename,
                                 icon: const Icon(Icons.edit_outlined, size: 20),
                                 onPressed: () => _renamePlaylist(context, pl.id, pl.name),
                               ),
@@ -158,24 +164,27 @@ class PlaylistsScreen extends StatelessWidget {
     final state = context.read<AppState>();
     final favorites = state.favoriteSongs;
     if (favorites.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Favorite some songs to fill this list.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(t(context).favoriteSomeSnack)));
       return;
     }
     AppNavigator.openPlaylist(
-        context, -1, 'Favorites'); // -1 signals the favorites view
+        context, -1, t(context).favorites); // -1 signals the favorites view
   }
 
   Future<void> _createPlaylist(BuildContext context) async {
-    final name = await _askName(context, title: 'New playlist', hint: 'Playlist name');
+    final strings = t(context);
+    final name = await _askName(context,
+        title: strings.newPlaylistTitle, hint: strings.playlistNameHint);
     if (name != null && name.trim().isNotEmpty && context.mounted) {
       await context.read<AppState>().createPlaylist(name.trim());
     }
   }
 
   Future<void> _renamePlaylist(BuildContext context, int id, String current) async {
+    final strings = t(context);
     final name = await _askName(context,
-        title: 'Rename playlist', hint: current, initial: current);
+        title: strings.renamePlaylistTitle, hint: current, initial: current);
     if (name != null && name.trim().isNotEmpty && context.mounted) {
       await context.read<AppState>().renamePlaylist(id, name.trim());
     }
@@ -187,22 +196,27 @@ Future<String?> _askName(BuildContext context,
   final controller = TextEditingController(text: initial);
   return showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: InputDecoration(hintText: hint),
-        onSubmitted: (v) => Navigator.pop(context, v),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, controller.text),
-          child: const Text('Save'),
+    builder: (context) {
+      final strings = t(context);
+      return AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(hintText: hint),
+          onSubmitted: (v) => Navigator.pop(context, v),
         ),
-      ],
-    ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(strings.cancel)),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: Text(strings.save),
+          ),
+        ],
+      );
+    },
   );
 }

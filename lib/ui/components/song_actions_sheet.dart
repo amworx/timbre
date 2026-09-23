@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../navigation/app_navigator.dart';
 import 'song_selection.dart';
@@ -58,6 +59,7 @@ class _SongActionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final cs = Theme.of(context).colorScheme;
+    final strings = t(context);
     final fav = state.favoriteIds.contains(song.id);
 
     return _SheetFrame(
@@ -91,7 +93,7 @@ class _SongActionsSheet extends StatelessWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.playlist_add_rounded),
-            title: const Text('Play next'),
+            title: Text(strings.playNext),
             onTap: () {
               final app = parentContext.read<AppState>();
               Navigator.pop(context);
@@ -100,7 +102,7 @@ class _SongActionsSheet extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.queue_rounded),
-            title: const Text('Add to queue'),
+            title: Text(strings.addToQueue),
             onTap: () {
               final app = parentContext.read<AppState>();
               Navigator.pop(context);
@@ -109,7 +111,7 @@ class _SongActionsSheet extends StatelessWidget {
           ),
           ListTile(
             leading: Icon(fav ? Icons.heart_broken_rounded : Icons.favorite_outline_rounded),
-            title: Text(fav ? 'Remove from favorites' : 'Add to favorites'),
+            title: Text(fav ? strings.tipRemoveFav : strings.tipAddFav),
             onTap: () {
               final app = parentContext.read<AppState>();
               Navigator.pop(context);
@@ -118,7 +120,7 @@ class _SongActionsSheet extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.playlist_add_circle_outlined),
-            title: const Text('Add to playlist…'),
+            title: Text(strings.addToPlaylist),
             onTap: () {
               Navigator.pop(context);
               showPlaylistPickerForSongs(parentContext, [song]);
@@ -126,7 +128,7 @@ class _SongActionsSheet extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.album_outlined),
-            title: const Text('Go to album'),
+            title: Text(strings.goToAlbum),
             onTap: () {
               Navigator.pop(context);
               AppNavigator.openAlbum(parentContext, song.albumId, song.album);
@@ -134,7 +136,7 @@ class _SongActionsSheet extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.person_outline_rounded),
-            title: const Text('Go to artist'),
+            title: Text(strings.goToArtist),
             onTap: () {
               Navigator.pop(context);
               AppNavigator.openArtist(parentContext, song.artistId, song.artist);
@@ -142,16 +144,18 @@ class _SongActionsSheet extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.ios_share_rounded),
-            title: const Text('Share audio file'),
+            title: Text(strings.shareAudioFile),
             onTap: () async {
               final app = parentContext.read<AppState>();
               final messenger = ScaffoldMessenger.of(parentContext);
+              final strings = t(parentContext);
               Navigator.pop(context);
-              final outcome = await app.shareSongs([song]);
+              final outcome = await app.shareSongs([song], strings);
               if (outcome.attached == 0) {
                 messenger.showSnackBar(
                   SnackBar(
-                      content: Text(outcome.message ?? 'Nothing to share.')),
+                      content: Text(
+                          outcome.message ?? strings.nothingToShare)),
                 );
               }
             },
@@ -159,25 +163,27 @@ class _SongActionsSheet extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.delete_outline_rounded,
                 color: Theme.of(context).colorScheme.error),
-            title: Text('Delete from device',
+            title: Text(strings.deleteFromDevice,
                 style:
                     TextStyle(color: Theme.of(context).colorScheme.error)),
             onTap: () async {
               final app = parentContext.read<AppState>();
               final messenger = ScaffoldMessenger.of(parentContext);
+              final strings = t(parentContext);
               Navigator.pop(context);
               final confirmed = await confirmDeviceDelete(
                 parentContext,
+                strings,
                 count: 1,
                 songTitle: song.title,
               );
               if (!confirmed) return;
-              final summary = await app.deleteSongs([song]);
+              final summary = await app.deleteSongs([song], strings);
               if (summary.deleted != 1) {
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text(
-                        summary.message ?? 'Could not delete this song.'),
+                        summary.message ?? strings.couldNotDeleteSong),
                   ),
                 );
               }
@@ -199,6 +205,7 @@ class _PlaylistPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final strings = t(context);
     return _SheetFrame(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -209,19 +216,19 @@ class _PlaylistPicker extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               child: Text(
                 songs.length == 1
-                    ? 'Add to playlist'
-                    : 'Add ${songs.length} songs to playlist',
+                    ? strings.addToPlaylistTitle
+                    : strings.addCountToPlaylist(songs.length),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
           ),
           ListTile(
             leading: const Icon(Icons.add_rounded),
-            title: const Text('New playlist'),
+            title: Text(strings.newPlaylistTitle),
             onTap: () async {
               Navigator.pop(context);
-              final name =
-                  await _askPlaylistName(parentContext, 'New playlist');
+              final name = await _askPlaylistName(
+                  parentContext, strings.newPlaylistTitle);
               if (name != null && name.trim().isNotEmpty) {
                 await state.createPlaylist(name.trim());
                 final playlists = state.playlists;
@@ -241,7 +248,7 @@ class _PlaylistPicker extends StatelessWidget {
                   .map((pl) => ListTile(
                         leading: const Icon(Icons.queue_music_rounded),
                         title: Text(pl.name),
-                        subtitle: Text('${pl.songCount} songs'),
+                        subtitle: Text(strings.songsCount(pl.songCount)),
                         onTap: () async {
                           Navigator.pop(context);
                           for (final song in songs) {
@@ -263,22 +270,27 @@ Future<String?> _askPlaylistName(BuildContext context, String title) {
   final controller = TextEditingController();
   return showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(hintText: 'Playlist name'),
-        onSubmitted: (v) => Navigator.pop(context, v),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, controller.text),
-          child: const Text('Create'),
+    builder: (context) {
+      final strings = t(context);
+      return AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(hintText: strings.playlistNameHint),
+          onSubmitted: (v) => Navigator.pop(context, v),
         ),
-      ],
-    ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(strings.cancel)),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: Text(strings.create),
+          ),
+        ],
+      );
+    },
   );
 }

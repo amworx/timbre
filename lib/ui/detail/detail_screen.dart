@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
@@ -58,12 +59,15 @@ class _DetailScreenState extends State<DetailScreen> {
     final songs = _selectedSongs;
     if (songs.isEmpty) return;
     setState(() => _busy = true);
-    final outcome = await context.read<AppState>().shareSongs(songs);
+    final outcome =
+        await context.read<AppState>().shareSongs(songs, t(context));
     if (!mounted) return;
     setState(() => _busy = false);
     if (outcome.attached == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(outcome.message ?? 'Nothing to share.')),
+        SnackBar(
+            content:
+                Text(outcome.message ?? t(context).nothingToShare)),
       );
     } else {
       _selection.clear();
@@ -73,10 +77,13 @@ class _DetailScreenState extends State<DetailScreen> {
   Future<void> _deleteSelected() async {
     final songs = _selectedSongs;
     if (songs.isEmpty) return;
-    final confirmed = await confirmDeviceDelete(context, count: songs.length);
+    final strings = t(context);
+    final confirmed =
+        await confirmDeviceDelete(context, strings, count: songs.length);
     if (!confirmed || !mounted) return;
     setState(() => _busy = true);
-    final summary = await context.read<AppState>().deleteSongs(songs);
+    final summary =
+        await context.read<AppState>().deleteSongs(songs, strings);
     if (!mounted) return;
     setState(() => _busy = false);
     _selection.clear();
@@ -84,47 +91,49 @@ class _DetailScreenState extends State<DetailScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          summary.deleted == songs.length
-              ? 'Deleted ${summary.deleted}.'
-              : 'Deleted ${summary.deleted} of ${songs.length}.'
-                  '${summary.message == null ? '' : ' ${summary.message}'}',
-        ),
+        content: Text(deleteResultText(strings, summary, songs.length)),
       ),
     );
   }
 
   Future<void> _resolve() async {
     final state = context.read<AppState>();
+    if (!mounted) return;
+    final strings = t(context);
     List<Song> songs;
     String? subtitle;
+
+    String artistName(String name) =>
+        name == kUnknownArtist ? strings.unknownArtist : name;
 
     switch (widget.kind) {
       case DetailKind.album:
         songs = state.albumSongs(widget.id!);
         final album = state.albums.where((a) => a.id == widget.id).firstOrNull;
         subtitle = [
-          album?.artist,
-          album == null ? null : songsLabel(album.songCount),
-          album == null ? null : formatTotalDuration(album.totalDurationMs),
+          album == null ? null : artistName(album.artist),
+          album == null ? null : songsLabel(strings, album.songCount),
+          album == null
+              ? null
+              : formatTotalDuration(strings, album.totalDurationMs),
         ].whereType<String>().join(' · ');
       case DetailKind.artist:
         songs = state.artistSongs(widget.id!);
-        subtitle = songsLabel(songs.length);
+        subtitle = songsLabel(strings, songs.length);
       case DetailKind.genre:
         songs = state.genreSongs(widget.title);
-        subtitle = songsLabel(songs.length);
+        subtitle = songsLabel(strings, songs.length);
       case DetailKind.folder:
         songs = state.folderSongs(widget.id!);
-        subtitle = songsLabel(songs.length);
+        subtitle = songsLabel(strings, songs.length);
       case DetailKind.playlist:
         _playlistId = int.tryParse(widget.id ?? '');
         if (_playlistId == -1) {
           songs = state.favoriteSongs;
-          subtitle = songsLabel(songs.length);
+          subtitle = songsLabel(strings, songs.length);
         } else if (_playlistId != null) {
           songs = await state.playlistSongs(_playlistId!);
-          subtitle = songsLabel(songs.length);
+          subtitle = songsLabel(strings, songs.length);
         } else {
           songs = const [];
         }
@@ -143,6 +152,7 @@ class _DetailScreenState extends State<DetailScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final cs = Theme.of(context).colorScheme;
+    final strings = t(context);
     final isFavorites = widget.kind == DetailKind.playlist && _playlistId == -1;
     final barBottom = selectionBarBottom(
       systemBottom: MediaQuery.paddingOf(context).bottom,
@@ -193,13 +203,13 @@ class _DetailScreenState extends State<DetailScreen> {
                       FilledButton.icon(
                         onPressed: _songs.isEmpty ? null : () => _play(state, shuffle: false),
                         icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Play'),
+                        label: Text(strings.play),
                       ),
                       const SizedBox(width: 12),
                       FilledButton.tonalIcon(
                         onPressed: _songs.isEmpty ? null : () => _play(state, shuffle: true),
                         icon: const Icon(Icons.shuffle_rounded),
-                        label: const Text('Shuffle'),
+                        label: Text(strings.shuffle),
                       ),
                       if (isFavorites) const Spacer(),
                     ],
@@ -217,8 +227,8 @@ class _DetailScreenState extends State<DetailScreen> {
               hasScrollBody: false,
               child: EmptyState(
                 icon: Icons.music_off_outlined,
-                title: 'No songs here yet',
-                body: 'Songs you add will show up in this list.',
+                title: strings.noSongsHere,
+                body: strings.songsWillShow,
               ),
             )
           else

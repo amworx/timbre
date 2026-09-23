@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models.dart';
+import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import 'song_row.dart';
 import 'song_selection.dart';
@@ -62,6 +63,7 @@ class SwipeSongRow extends StatelessWidget {
 
   Widget _swipeable(BuildContext context) {
     final selection = this.selection;
+    final strings = t(context);
     return Dismissible(
       key: ValueKey('swipe-$keySuffix-${song.id}'),
       direction: DismissDirection.horizontal,
@@ -69,13 +71,13 @@ class SwipeSongRow extends StatelessWidget {
         alignment: AlignmentDirectional.centerStart,
         color: Theme.of(context).colorScheme.primary,
         icon: Icons.ios_share_rounded,
-        label: 'Share',
+        label: strings.tipShare,
       ),
-      secondaryBackground: const _SwipeBackground(
+      secondaryBackground: _SwipeBackground(
         alignment: AlignmentDirectional.centerEnd,
         color: Colors.red,
         icon: Icons.delete_outline_rounded,
-        label: 'Delete',
+        label: strings.tipDelete,
       ),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
@@ -99,25 +101,29 @@ class SwipeSongRow extends StatelessWidget {
   Future<void> _share(BuildContext context) async {
     final app = context.read<AppState>();
     final messenger = ScaffoldMessenger.of(context);
-    final outcome = await app.shareSongs([song]);
+    final strings = t(context);
+    final outcome = await app.shareSongs([song], strings);
     if (outcome.attached == 0 && context.mounted) {
       messenger.showSnackBar(
-        SnackBar(content: Text(outcome.message ?? 'Nothing to share.')),
+        SnackBar(
+            content: Text(outcome.message ?? strings.nothingToShare)),
       );
     }
   }
 
   /// Returns true when the row should animate out (file actually deleted).
   Future<bool> _delete(BuildContext context) async {
+    final strings = t(context);
     final confirmed = await confirmDeviceDelete(
       context,
+      strings,
       count: 1,
       songTitle: song.title,
     );
     if (!confirmed || !context.mounted) return false;
     final app = context.read<AppState>();
     final messenger = ScaffoldMessenger.of(context);
-    final summary = await app.deleteSongs([song]);
+    final summary = await app.deleteSongs([song], strings);
     if (!context.mounted) return summary.deleted == 1;
     if (summary.deleted == 1) {
       onAfterDelete?.call();
@@ -125,7 +131,7 @@ class SwipeSongRow extends StatelessWidget {
     }
     messenger.showSnackBar(
       SnackBar(
-        content: Text(summary.message ?? 'Could not delete this song.'),
+        content: Text(summary.message ?? strings.couldNotDeleteSong),
       ),
     );
     return false;
