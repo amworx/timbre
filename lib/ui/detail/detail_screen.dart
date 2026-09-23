@@ -144,6 +144,10 @@ class _DetailScreenState extends State<DetailScreen> {
     final state = context.watch<AppState>();
     final cs = Theme.of(context).colorScheme;
     final isFavorites = widget.kind == DetailKind.playlist && _playlistId == -1;
+    final barBottom = selectionBarBottom(
+      systemBottom: MediaQuery.paddingOf(context).bottom,
+      miniVisible: state.currentSong != null,
+    );
 
     return Scaffold(
       // Back exits selection mode first (Gmail behavior), not the screen.
@@ -236,8 +240,8 @@ class _DetailScreenState extends State<DetailScreen> {
               Positioned(
                 left: 16,
                 right: 16,
-                // Above the mini player + navigation bar.
-                bottom: 148,
+                // Above the navigation bar (+ mini player when showing).
+                bottom: barBottom,
                 child: SelectionActionBar(
                   visible: _selection.isSelecting,
                   selectedCount: _selection.count,

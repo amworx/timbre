@@ -10,6 +10,9 @@ import 'song_selection.dart';
 Future<void> showSongActions(BuildContext context, Song song) {
   return showModalBottomSheet(
     context: context,
+    // Full-height-capable sheet: the action list scrolls instead of
+    // clipping its last row off-screen on short displays.
+    isScrollControlled: true,
     builder: (sheetContext) =>
         _SongActionsSheet(song: song, parentContext: context),
   );
@@ -20,8 +23,29 @@ Future<void> showPlaylistPickerForSongs(
     BuildContext context, List<Song> songs) {
   return showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
     builder: (_) => _PlaylistPicker(songs: songs, parentContext: context),
   );
+}
+
+/// Frames sheet content so it never runs past the screen: capped at 85%
+/// of the display height and scrollable past that point.
+class _SheetFrame extends StatelessWidget {
+  final Widget child;
+
+  const _SheetFrame({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: SingleChildScrollView(child: child),
+      ),
+    );
+  }
 }
 
 class _SongActionsSheet extends StatelessWidget {
@@ -36,7 +60,7 @@ class _SongActionsSheet extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final fav = state.favoriteIds.contains(song.id);
 
-    return SafeArea(
+    return _SheetFrame(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -69,24 +93,27 @@ class _SongActionsSheet extends StatelessWidget {
             leading: const Icon(Icons.playlist_add_rounded),
             title: const Text('Play next'),
             onTap: () {
+              final app = parentContext.read<AppState>();
               Navigator.pop(context);
-              context.read<AppState>().playNextInQueue(song);
+              app.playNextInQueue(song);
             },
           ),
           ListTile(
             leading: const Icon(Icons.queue_rounded),
             title: const Text('Add to queue'),
             onTap: () {
+              final app = parentContext.read<AppState>();
               Navigator.pop(context);
-              context.read<AppState>().addToQueue(song);
+              app.addToQueue(song);
             },
           ),
           ListTile(
             leading: Icon(fav ? Icons.heart_broken_rounded : Icons.favorite_outline_rounded),
             title: Text(fav ? 'Remove from favorites' : 'Add to favorites'),
             onTap: () {
+              final app = parentContext.read<AppState>();
               Navigator.pop(context);
-              context.read<AppState>().toggleFavorite(song);
+              app.toggleFavorite(song);
             },
           ),
           ListTile(
@@ -102,7 +129,7 @@ class _SongActionsSheet extends StatelessWidget {
             title: const Text('Go to album'),
             onTap: () {
               Navigator.pop(context);
-              AppNavigator.openAlbum(context, song.albumId, song.album);
+              AppNavigator.openAlbum(parentContext, song.albumId, song.album);
             },
           ),
           ListTile(
@@ -110,7 +137,7 @@ class _SongActionsSheet extends StatelessWidget {
             title: const Text('Go to artist'),
             onTap: () {
               Navigator.pop(context);
-              AppNavigator.openArtist(context, song.artistId, song.artist);
+              AppNavigator.openArtist(parentContext, song.artistId, song.artist);
             },
           ),
           ListTile(
@@ -172,7 +199,7 @@ class _PlaylistPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return SafeArea(
+    return _SheetFrame(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -244,6 +244,12 @@ class _SongsListState extends State<_SongsList> {
   @override
   Widget build(BuildContext context) {
     final songs = widget.songs;
+    final miniVisible =
+        context.select<AppState, bool>((a) => a.currentSong != null);
+    final barBottom = selectionBarBottom(
+      systemBottom: MediaQuery.paddingOf(context).bottom,
+      miniVisible: miniVisible,
+    );
     // Back exits selection mode first (Gmail behavior), not the screen.
     return ListenableBuilder(
       listenable: _selection,
@@ -268,8 +274,8 @@ class _SongsListState extends State<_SongsList> {
             Positioned(
               left: 16,
               right: 16,
-              // Above the mini player + navigation bar.
-              bottom: 148,
+              // Above the navigation bar (+ mini player when showing).
+              bottom: barBottom,
               child: SelectionActionBar(
                 visible: _selection.isSelecting,
                 selectedCount: _selection.count,

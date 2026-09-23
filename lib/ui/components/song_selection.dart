@@ -34,6 +34,16 @@ class SongSelection extends ChangeNotifier {
   }
 }
 
+/// Bottom offset for the bulk-action bar so it always floats clear of the
+/// navigation bar (68), the mini player when one is showing (58 + padding),
+/// and the system gesture inset — with a 12px breathing gap.
+/// Pure so it stays unit-testable; callers feed real insets in.
+double selectionBarBottom({
+  required double systemBottom,
+  required bool miniVisible,
+}) =>
+    systemBottom + 68 + (miniVisible ? 70 : 0) + 12;
+
 /// Floating bulk-action bar (Gmail-style contextual actions). Slides and
 /// fades in above the mini player while [visible]; hidden otherwise.
 class SelectionActionBar extends StatelessWidget {

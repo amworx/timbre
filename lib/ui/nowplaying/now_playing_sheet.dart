@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../navigation/app_navigator.dart';
 import '../components/formatters.dart';
+import '../components/song_selection.dart';
 import '../theme/timbre_theme.dart';
 import 'sleep_sheet.dart';
 import 'speed_sheet.dart';
@@ -157,6 +158,56 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                             : cs.onSurfaceVariant,
                       ),
                       onPressed: () => state.toggleFavorite(song),
+                    ),
+                    IconButton(
+                      tooltip: 'Share audio file',
+                      icon: Icon(Icons.ios_share_rounded,
+                          color: cs.onSurfaceVariant),
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final outcome = await state.shareSongs([song]);
+                        if (outcome.attached == 0 && context.mounted) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  outcome.message ?? 'Nothing to share.'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'Delete from device',
+                      icon: Icon(Icons.delete_outline_rounded,
+                          color: cs.error),
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final confirmed = await confirmDeviceDelete(
+                          context,
+                          count: 1,
+                          songTitle: song.title,
+                        );
+                        if (!confirmed || !context.mounted) return;
+                        final summary = await state.deleteSongs([song]);
+                        if (!context.mounted) return;
+                        if (summary.deleted == 1) {
+                          // Playback moved on (or stopped): the sheet
+                          // follows the new current song automatically.
+                          // Only close when nothing is left to show.
+                          if (state.currentSong == null) {
+                            Navigator.pop(context);
+                          }
+                        } else {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                summary.message ??
+                                    'Could not delete this song.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
                     IconButton(
                       tooltip: 'Sleep timer',
