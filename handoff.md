@@ -135,6 +135,21 @@ Useful on-device probes (always with `-s <transport>`):
   release with an APK plus coordination (shared phone, installer steals
   foreground).
 
+## v1.0.1 batch (2026-09-23/24, all verified on-device)
+
+- Manifest regression test (`test/manifest_test.dart`): FGS perms, updater
+  provider, Impeller=false.
+- Notification-denied playback: one-time prompt on first play (never blocks
+  music) + Settings status tile with fix-up path.
+- Full Arabic localization: gen-l10n, ~140 keys en/ar, locale-aware counts/
+  dates, RTL automatic, arb parity test. Phone is en-locale so device shows
+  English; Arabic activates on ar-locale phones.
+- Share/delete/swipe/bulk (from prior session) + player-window actions,
+  bulk-bar clearance, scrollable action sheets, Back-exits-selection.
+- v1.0.1 shipped as GitHub release with arm64 APK + sha256; in-app update
+  proven end-to-end on the A34 (1.0.0 → found 1.0.1 → downloaded → system
+  installer → 1.0.1 running, "You're up to date", zero crashes).
+
 ## Suggested next steps (not started)
 
 - Full inset audit: bottom gesture-bar padding behind MiniPlayer/NavigationBar
