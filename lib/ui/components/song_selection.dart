@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
+import 'responsive.dart';
 
 /// Per-list multi-select state (bulk actions). Owned by the list screen,
 /// never global: leaving the list drops the instance and the selection.
@@ -39,14 +40,17 @@ class SongSelection extends ChangeNotifier {
 }
 
 /// Bottom offset for the bulk-action bar so it always floats clear of the
-/// navigation bar (68), the mini player when one is showing (58 + padding),
-/// and the system gesture inset — with a 12px breathing gap.
-/// Pure so it stays unit-testable; callers feed real insets in.
+/// navigation bar, the mini player when one is showing, and the system
+/// gesture inset — with a breathing gap. Pure so it stays unit-testable;
+/// callers feed real insets in. Prefer [TimbreOverlay.barBottom] in widgets.
 double selectionBarBottom({
   required double systemBottom,
   required bool miniVisible,
 }) =>
-    systemBottom + 68 + (miniVisible ? 70 : 0) + 12;
+    systemBottom +
+    TimbreOverlay.navBarHeight +
+    (miniVisible ? TimbreOverlay.miniPlayerHeight + 4 : 0) +
+    TimbreOverlay.gap;
 
 /// Floating bulk-action bar (Gmail-style contextual actions). Slides and
 /// fades in above the mini player while [visible]; hidden otherwise.
@@ -102,19 +106,22 @@ class SelectionActionBar extends StatelessWidget {
                     icon: Icon(Icons.close_rounded,
                         color: cs.onInverseSurface),
                   ),
-                  GestureDetector(
-                    onTap: busy ? null : onSelectAll,
-                    child: Text(
-                      selectedCount == totalCount && totalCount > 0
-                          ? strings.selAllTotal(totalCount)
-                          : strings.selCountAll(selectedCount),
-                      style: TextStyle(
-                        color: cs.onInverseSurface,
-                        fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: busy ? null : onSelectAll,
+                      child: Text(
+                        selectedCount == totalCount && totalCount > 0
+                            ? strings.selAllTotal(totalCount)
+                            : strings.selCountAll(selectedCount),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: cs.onInverseSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                  const Spacer(),
                   IconButton(
                     tooltip: strings.tipShare,
                     onPressed: busy ? null : onShare,

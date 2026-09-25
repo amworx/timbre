@@ -5,6 +5,7 @@ import '../../state/app_state.dart';
 import '../../l10n/l10n_ext.dart';
 import '../components/empty_state.dart';
 import '../components/formatters.dart';
+import '../components/responsive.dart';
 import '../navigation/app_navigator.dart';
 import '../theme/timbre_theme.dart';
 
@@ -53,8 +54,10 @@ class PlaylistsScreen extends StatelessWidget {
                       onAction: () => _createPlaylist(context),
                     )
                   : ListView(
-                      padding: const EdgeInsets.only(
-                          top: TimbreSpacing.sm, bottom: 140),
+                      padding: EdgeInsets.only(
+                          top: TimbreSpacing.sm,
+                          bottom: TimbreOverlay.listBottomPadding(context,
+                              miniVisible: state.currentSong != null)),
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(

@@ -407,7 +407,7 @@ class _UpdateResultView extends StatelessWidget {
     final strings = t(context);
     if (checking) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(72, 0, 24, 8),
+        padding: const EdgeInsetsDirectional.fromSTEB(72, 0, 24, 8),
         child: Text(strings.checking),
       );
     }
@@ -509,7 +509,7 @@ class _StatusLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 24, 8),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 24, 8),
       child: Row(
         children: [
           const SizedBox(width: 56),

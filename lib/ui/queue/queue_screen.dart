@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../../l10n/l10n_ext.dart';
 import '../components/empty_state.dart';
+import '../components/responsive.dart';
 import '../components/song_row.dart';
-import '../theme/timbre_theme.dart';
 
 /// Queue: Now Playing + Up Next. Drag to reorder, tap to jump, swipe or menu
 /// to remove.
@@ -62,7 +62,9 @@ class QueueScreen extends StatelessWidget {
             )
           : SafeArea(
               child: ReorderableListView.builder(
-                padding: const EdgeInsets.only(bottom: TimbreSpacing.lg),
+                padding: EdgeInsets.only(
+                    bottom: TimbreOverlay.listBottomPadding(context,
+                        miniVisible: currentSong != null)),
                 itemCount: queue.length,
                 onReorderItem: (oldIndex, newIndex) async {
                   await state.moveInQueue(oldIndex, newIndex);

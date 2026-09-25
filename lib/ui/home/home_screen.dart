@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../components/artwork.dart';
+import '../components/responsive.dart';
 import '../icons/broadcast_icons.dart';
 import '../navigation/app_navigator.dart';
 import '../theme/timbre_theme.dart';
@@ -105,8 +106,12 @@ class _HomeScreenState extends State<HomeScreen> {
         bottom: false,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-              TimbreSpacing.md, TimbreSpacing.sm, TimbreSpacing.md, 150),
+          padding: EdgeInsets.fromLTRB(
+              TimbreSpacing.md,
+              TimbreSpacing.sm,
+              TimbreSpacing.md,
+              TimbreOverlay.listBottomPadding(context,
+                  miniVisible: state.currentSong != null)),
         children: [
           // Status row — date, archive, scanner, service menu, clock.
           Row(

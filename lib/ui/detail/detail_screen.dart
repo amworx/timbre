@@ -7,6 +7,7 @@ import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
 import '../components/formatters.dart';
+import '../components/responsive.dart';
 import '../components/song_actions_sheet.dart';
 import '../components/song_selection.dart';
 import '../components/swipe_song_row.dart';
@@ -154,10 +155,11 @@ class _DetailScreenState extends State<DetailScreen> {
     final cs = Theme.of(context).colorScheme;
     final strings = t(context);
     final isFavorites = widget.kind == DetailKind.playlist && _playlistId == -1;
-    final barBottom = selectionBarBottom(
-      systemBottom: MediaQuery.paddingOf(context).bottom,
-      miniVisible: state.currentSong != null,
-    );
+    final miniVisible = state.currentSong != null;
+    final barBottom =
+        TimbreOverlay.barBottom(context, miniVisible: miniVisible);
+    final listBottom =
+        TimbreOverlay.listBottomPadding(context, miniVisible: miniVisible);
 
     return Scaffold(
       // Back exits selection mode first (Gmail behavior), not the screen.
@@ -244,7 +246,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 childCount: _songs.length,
               ),
             ),
-              const SliverToBoxAdapter(child: SizedBox(height: 140)),
+              SliverToBoxAdapter(child: SizedBox(height: listBottom)),
                 ],
               ),
               Positioned(

@@ -7,6 +7,7 @@ import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
 import '../components/formatters.dart';
+import '../components/responsive.dart';
 import '../components/song_actions_sheet.dart';
 import '../components/song_selection.dart';
 import '../components/swipe_song_row.dart';
@@ -248,10 +249,10 @@ class _SongsListState extends State<_SongsList> {
     final songs = widget.songs;
     final miniVisible =
         context.select<AppState, bool>((a) => a.currentSong != null);
-    final barBottom = selectionBarBottom(
-      systemBottom: MediaQuery.paddingOf(context).bottom,
-      miniVisible: miniVisible,
-    );
+    final barBottom =
+        TimbreOverlay.barBottom(context, miniVisible: miniVisible);
+    final listBottom =
+        TimbreOverlay.listBottomPadding(context, miniVisible: miniVisible);
     // Back exits selection mode first (Gmail behavior), not the screen.
     return ListenableBuilder(
       listenable: _selection,
@@ -263,7 +264,7 @@ class _SongsListState extends State<_SongsList> {
         child: Stack(
           children: [
             ListView.builder(
-          padding: const EdgeInsets.only(bottom: 140, top: TimbreSpacing.sm),
+          padding: EdgeInsets.only(bottom: listBottom, top: TimbreSpacing.sm),
           itemCount: songs.length,
           itemBuilder: (context, i) => SwipeSongRow(
             key: ValueKey('lib-${songs[i].id}'),
@@ -310,8 +311,12 @@ class _AlbumsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final miniVisible =
+        context.select<AppState, bool>((a) => a.currentSong != null);
     return GridView.builder(
-      padding: const EdgeInsets.all(TimbreSpacing.md).copyWith(bottom: 140),
+      padding: EdgeInsets.all(TimbreSpacing.md).copyWith(
+          bottom: TimbreOverlay.listBottomPadding(context,
+              miniVisible: miniVisible)),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 180,
         mainAxisSpacing: TimbreSpacing.md,
@@ -361,7 +366,10 @@ class _ArtistsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 140, top: TimbreSpacing.sm),
+      padding: EdgeInsets.only(
+          bottom: TimbreOverlay.listBottomPadding(context,
+              miniVisible: context.select<AppState, bool>((a) => a.currentSong != null)),
+          top: TimbreSpacing.sm),
       itemCount: artists.length,
       itemBuilder: (context, i) {
         final artist = artists[i];
@@ -397,7 +405,10 @@ class _GenresList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 140, top: TimbreSpacing.sm),
+      padding: EdgeInsets.only(
+          bottom: TimbreOverlay.listBottomPadding(context,
+              miniVisible: context.select<AppState, bool>((a) => a.currentSong != null)),
+          top: TimbreSpacing.sm),
       itemCount: genres.length,
       itemBuilder: (context, i) {
         final genre = genres[i];
@@ -430,7 +441,10 @@ class _FoldersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 140, top: TimbreSpacing.sm),
+      padding: EdgeInsets.only(
+          bottom: TimbreOverlay.listBottomPadding(context,
+              miniVisible: context.select<AppState, bool>((a) => a.currentSong != null)),
+          top: TimbreSpacing.sm),
       itemCount: folders.length,
       itemBuilder: (context, i) {
         final folder = folders[i];

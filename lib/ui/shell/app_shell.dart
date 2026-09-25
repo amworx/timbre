@@ -135,9 +135,17 @@ class _PermissionGate extends StatelessWidget {
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(TimbreSpacing.xl),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+              // Scrolls instead of overflowing on short screens.
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.sizeOf(context).height -
+                        MediaQuery.paddingOf(context).vertical -
+                        TimbreSpacing.xl * 2,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                   Text('TIMBRE FM', style: TimbreText.kicker(context)),
                   const SizedBox(height: TimbreSpacing.lg),
                   Text(strings.gateNoSignal,
@@ -168,7 +176,9 @@ class _PermissionGate extends StatelessWidget {
               ),
             ),
           ),
-        );
+        ),
+      ),
+    );
       case PermissionPhase.permanentlyDenied:
         return Scaffold(
           body: EmptyState(

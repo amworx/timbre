@@ -7,6 +7,7 @@ import '../../state/app_state.dart';
 import '../components/artwork.dart';
 import '../components/empty_state.dart';
 import '../components/formatters.dart';
+import '../components/responsive.dart';
 import '../components/song_row.dart';
 import '../navigation/app_navigator.dart';
 import '../theme/timbre_theme.dart';
@@ -137,8 +138,11 @@ class _IdleSuggestions extends StatelessWidget {
       );
     }
     final suggestions = state.songs.take(6).toList(growable: false);
+    final listBottom = TimbreOverlay.listBottomPadding(context,
+        miniVisible: state.currentSong != null);
     return ListView(
-      padding: const EdgeInsets.only(top: TimbreSpacing.sm, bottom: 140),
+      padding:
+          EdgeInsets.only(top: TimbreSpacing.sm, bottom: listBottom),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: TimbreSpacing.md),
@@ -171,8 +175,12 @@ class _Results extends StatelessWidget {
         body: t(context).nothingFoundBody,
       );
     }
+    final listBottom = TimbreOverlay.listBottomPadding(context,
+        miniVisible:
+            context.select<AppState, bool>((a) => a.currentSong != null));
     return ListView(
-      padding: const EdgeInsets.only(top: TimbreSpacing.sm, bottom: 140),
+      padding:
+          EdgeInsets.only(top: TimbreSpacing.sm, bottom: listBottom),
       children: [
         if (results.artists.isNotEmpty) ...[
           _SectionTitle(t(context).secArtists),
@@ -194,7 +202,7 @@ class _Results extends StatelessWidget {
         if (results.albums.isNotEmpty) ...[
           _SectionTitle(t(context).secAlbums),
           SizedBox(
-            height: 148,
+            height: 160,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: TimbreSpacing.md),

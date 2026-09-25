@@ -92,6 +92,8 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
               ),
 
               // Artwork -----------------------------------------------------
+              // Fills the middle on tall screens, shrinks to fit on
+              // short ones instead of overflowing the sheet.
               Expanded(
                 child: Center(
                   child: GestureDetector(
@@ -101,7 +103,15 @@ class _NowPlayingSheetState extends State<NowPlayingSheet> {
                     },
                     child: Hero(
                       tag: 'now-playing-art',
-                      child: _ArtView(file: _artFile, title: song.album, size: 280),
+                      child: LayoutBuilder(
+                        builder: (context, box) {
+                          final size = box.hasBoundedHeight
+                              ? (box.maxHeight - 16).clamp(140.0, 280.0)
+                              : 280.0;
+                          return _ArtView(
+                              file: _artFile, title: song.album, size: size);
+                        },
+                      ),
                     ),
                   ),
                 ),
