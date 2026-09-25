@@ -52,8 +52,10 @@ double selectionBarBottom({
     (miniVisible ? TimbreOverlay.miniPlayerHeight + 4 : 0) +
     TimbreOverlay.gap;
 
-/// Floating bulk-action bar (Gmail-style contextual actions). Slides and
-/// fades in above the mini player while [visible]; hidden otherwise.
+/// Vertical floating bulk-action pill pinned to the screen's trailing edge,
+/// vertically centered. Deliberately clear of the bottom stack (mini player
+/// + navigation bar), so it can never overlap them on any screen size.
+/// Slides and fades in while [visible]; hidden otherwise.
 class SelectionActionBar extends StatelessWidget {
   final bool visible;
   final int selectedCount;
@@ -82,10 +84,14 @@ class SelectionActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final strings = t(context);
+    // Slide in from the trailing edge (mirrored automatically in RTL).
+    final slideFrom = Directionality.of(context) == TextDirection.rtl
+        ? const Offset(-1.6, 0)
+        : const Offset(1.6, 0);
     return AnimatedSlide(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
-      offset: visible ? Offset.zero : const Offset(0, 1.6),
+      offset: visible ? Offset.zero : slideFrom,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 180),
         opacity: visible ? 1 : 0,
@@ -93,12 +99,12 @@ class SelectionActionBar extends StatelessWidget {
           ignoring: !visible,
           child: Material(
             elevation: 8,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(28),
             color: cs.inverseSurface,
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     tooltip: strings.tipClearSelection,
@@ -106,18 +112,21 @@ class SelectionActionBar extends StatelessWidget {
                     icon: Icon(Icons.close_rounded,
                         color: cs.onInverseSurface),
                   ),
-                  Expanded(
+                  Tooltip(
+                    message: selectedCount == totalCount && totalCount > 0
+                        ? strings.selAllTotal(totalCount)
+                        : strings.selCountAll(selectedCount),
                     child: GestureDetector(
                       onTap: busy ? null : onSelectAll,
-                      child: Text(
-                        selectedCount == totalCount && totalCount > 0
-                            ? strings.selAllTotal(totalCount)
-                            : strings.selCountAll(selectedCount),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: cs.onInverseSurface,
-                          fontWeight: FontWeight.w600,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          '$selectedCount',
+                          style: TextStyle(
+                            color: cs.onInverseSurface,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),

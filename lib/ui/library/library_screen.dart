@@ -249,8 +249,6 @@ class _SongsListState extends State<_SongsList> {
     final songs = widget.songs;
     final miniVisible =
         context.select<AppState, bool>((a) => a.currentSong != null);
-    final barBottom =
-        TimbreOverlay.barBottom(context, miniVisible: miniVisible);
     final listBottom =
         TimbreOverlay.listBottomPadding(context, miniVisible: miniVisible);
     // Back exits selection mode first (Gmail behavior), not the screen.
@@ -274,12 +272,13 @@ class _SongsListState extends State<_SongsList> {
             keySuffix: 'lib',
           ),
         ),
-            Positioned(
-              left: 16,
-              right: 16,
-              // Above the navigation bar (+ mini player when showing).
-              bottom: barBottom,
-              child: SelectionActionBar(
+            // Side pill: vertically centered on the trailing edge,
+            // structurally clear of the mini player + navigation bar.
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(end: 12),
+                child: SelectionActionBar(
                 visible: _selection.isSelecting,
                 selectedCount: _selection.count,
                 totalCount: songs.length,
@@ -295,6 +294,7 @@ class _SongsListState extends State<_SongsList> {
                   _selection.clear();
                 },
                 onDelete: _deleteSelected,
+                ),
               ),
             ),
           ],
