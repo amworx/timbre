@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/library_repository.dart';
 import '../domain/flow_queue.dart';
 import '../domain/models.dart';
+import '../library/library_filter.dart';
 import '../l10n/app_localizations.dart';
 import '../media/media_files.dart';
 import '../playback/timbre_audio_handler.dart';
@@ -55,6 +56,20 @@ class AppState extends ChangeNotifier {
   List<Genre> genres = const [];
   List<FolderRef> folders = const [];
 
+  // Library filters (Settings → Library filters) ----------------------
+  // [songs]/groups below are the FILTERED view. [_unfilteredSongs] and
+  // [allFolders] keep the full picture so the folder editor can offer
+  // hidden folders back and toggles apply instantly without rescanning.
+  List<Song> _unfilteredSongs = const [];
+  List<FolderRef> allFolders = const [];
+  Set<String> excludedFolders = {};
+  int minDurationMs = 0;
+
+  LibraryFilter get filter => LibraryFilter(
+        excludedFolders: excludedFolders,
+        minDurationMs: minDurationMs,
+      );
+
   Set<int> favoriteIds = {};
   List<Playlist> playlists = [];
 
@@ -88,6 +103,7 @@ class AppState extends ChangeNotifier {
   Future<void> bootstrap() async {
     await refreshPermissionState();
     await refreshNotificationState();
+    await loadFilters();
     if (permissionPhase == PermissionPhase.granted) {
       await scanLibrary();
     } else {
@@ -124,12 +140,9 @@ class AppState extends ChangeNotifier {
     loadState = LoadState.loading;
     notifyListeners();
     try {
-      final loaded = await library.loadSongs();
-      songs = loaded;
-      albums = library.albumsOf(loaded);
-      artists = library.artistsOf(loaded);
-      genres = library.genresOf(loaded);
-      folders = library.foldersOf(loaded);
+      _unfilteredSongs = await library.loadSongs();
+      allFolders = library.foldersOf(_unfilteredSongs);
+      await _rebuildFilteredLists();
       favoriteIds = await library.loadFavoriteIds();
       playlists = await library.loadPlaylists();
       await _loadContinueEntry();
@@ -138,6 +151,77 @@ class AppState extends ChangeNotifier {
       loadError = e.toString();
       loadState = LoadState.error;
     }
+    notifyListeners();
+  }
+
+  /// Re-derives the visible library from [_unfilteredSongs] + [filter].
+  Future<void> _rebuildFilteredLists() async {
+    final visible = filter.apply(_unfilteredSongs);
+    songs = visible;
+    albums = library.albumsOf(visible);
+    artists = library.artistsOf(visible);
+    genres = library.genresOf(visible);
+    folders = library.foldersOf(visible);
+  }
+
+  // Library filter controls (persisted, applied without rescanning) -----
+
+  static const _filterMinKey = 'filters.minDurationMs';
+  static const _filterExcludedKey = 'filters.excludedFolders';
+
+  Future<void> loadFilters() async {
+    final prefs = await SharedPreferences.getInstance();
+    minDurationMs = prefs.getInt(_filterMinKey) ?? 0;
+    excludedFolders =
+        (prefs.getStringList(_filterExcludedKey) ?? const []).toSet();
+  }
+
+  Future<void> _saveFilters() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_filterMinKey, minDurationMs);
+    await prefs.setStringList(
+        _filterExcludedKey, excludedFolders.toList(growable: false));
+  }
+
+  Future<void> setMinDuration(int ms) async {
+    minDurationMs = ms < 0 ? 0 : ms;
+    await _saveFilters();
+    await _rebuildFilteredLists();
+    await _loadContinueEntry();
+    notifyListeners();
+  }
+
+  Future<void> setFolderExcluded(String folder, bool excluded) async {
+    if (excluded) {
+      excludedFolders = Set.of(excludedFolders)..add(folder);
+    } else {
+      excludedFolders = Set.of(excludedFolders)..remove(folder);
+    }
+    await _saveFilters();
+    await _rebuildFilteredLists();
+    await _loadContinueEntry();
+    notifyListeners();
+  }
+
+  /// Hides every detected messaging-audio folder (WhatsApp/Telegram voice
+  /// notes…). Returns how many folders were hidden.
+  Future<int> hideMessagingAudio() async {
+    final matches = messagingAudioFolders(allFolders.map((f) => f.path));
+    if (matches.isEmpty) return 0;
+    excludedFolders = Set.of(excludedFolders)..addAll(matches);
+    await _saveFilters();
+    await _rebuildFilteredLists();
+    await _loadContinueEntry();
+    notifyListeners();
+    return matches.length;
+  }
+
+  Future<void> showAllFolders() async {
+    if (excludedFolders.isEmpty) return;
+    excludedFolders = {};
+    await _saveFilters();
+    await _rebuildFilteredLists();
+    await _loadContinueEntry();
     notifyListeners();
   }
 
@@ -471,6 +555,10 @@ class AppState extends ChangeNotifier {
     if (deletedIds.isNotEmpty) {
       final currentDeleted =
           currentSong != null && deletedIds.contains(currentSong!.id);
+      _unfilteredSongs = _unfilteredSongs
+          .where((s) => !deletedIds.contains(s.id))
+          .toList(growable: false);
+      allFolders = library.foldersOf(_unfilteredSongs);
       final remaining =
           songs.where((s) => !deletedIds.contains(s.id)).toList();
       songs = remaining;

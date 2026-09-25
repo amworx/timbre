@@ -1346,6 +1346,108 @@ abstract class AppLocalizations {
   /// **'{h, plural, =0{{m} min} other{{h} h {m} min}}'**
   String totalDuration(int h, int m);
 
+  /// No description provided for @filtersSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Library filters'**
+  String get filtersSection;
+
+  /// No description provided for @minDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum duration'**
+  String get minDuration;
+
+  /// No description provided for @durAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get durAny;
+
+  /// No description provided for @dur15s.
+  ///
+  /// In en, this message translates to:
+  /// **'15 sec'**
+  String get dur15s;
+
+  /// No description provided for @dur30s.
+  ///
+  /// In en, this message translates to:
+  /// **'30 sec'**
+  String get dur30s;
+
+  /// No description provided for @dur1min.
+  ///
+  /// In en, this message translates to:
+  /// **'1 min'**
+  String get dur1min;
+
+  /// No description provided for @dur2min.
+  ///
+  /// In en, this message translates to:
+  /// **'2 min'**
+  String get dur2min;
+
+  /// No description provided for @hiddenFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden folders'**
+  String get hiddenFolders;
+
+  /// No description provided for @filtersOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything is listed'**
+  String get filtersOff;
+
+  /// No description provided for @hiddenFoldersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 hidden folder} other{{n} hidden folders}}'**
+  String hiddenFoldersCount(int n);
+
+  /// No description provided for @minActive.
+  ///
+  /// In en, this message translates to:
+  /// **'≥ {label}'**
+  String minActive(String label);
+
+  /// No description provided for @folderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden folders'**
+  String get folderTitle;
+
+  /// No description provided for @folderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Untick a folder to hide its audio from the library. Nothing is deleted.'**
+  String get folderBody;
+
+  /// No description provided for @hideMessaging.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide WhatsApp & Telegram audio'**
+  String get hideMessaging;
+
+  /// No description provided for @messagingHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 messaging folder hidden} other{{n} messaging folders hidden}}'**
+  String messagingHidden(int n);
+
+  /// No description provided for @noMessagingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No messaging audio folders found.'**
+  String get noMessagingFound;
+
+  /// No description provided for @showAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all'**
+  String get showAll;
+
   /// No description provided for @cancel.
   ///
   /// In en, this message translates to:

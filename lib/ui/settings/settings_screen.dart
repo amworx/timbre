@@ -7,12 +7,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../l10n/l10n_ext.dart';
 import '../../state/app_state.dart';
 import '../../state/notification_permission.dart';
 import '../../update/app_updater.dart';
 import '../theme/locale_controller.dart';
 import '../theme/theme_controller.dart';
+import 'folder_filter_screen.dart';
 
 /// Settings: theme, history management, updates, notifications, about.
 class SettingsScreen extends StatefulWidget {
@@ -281,6 +283,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => state.scanLibrary(),
           ),
           const Divider(),
+          _SectionLabel(strings.filtersSection),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(72, 0, 24, 4),
+            child: Text(strings.minDuration,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 13)),
+          ),
+          _DurationChips(),
+          ListTile(
+            leading: const Icon(Icons.folder_off_outlined),
+            title: Text(strings.hiddenFolders),
+            subtitle: Text(_filterSummary(strings, state)),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const FolderFilterScreen()),
+            ),
+          ),
+          const Divider(),
           _SectionLabel(strings.updatesSection),
           ListTile(
             leading: const Icon(Icons.smartphone_rounded),
@@ -326,6 +349,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(strings.versionLine(_currentVersion)),
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+String _durationLabel(AppLocalizations strings, int seconds) =>
+    switch (seconds) {
+      15 => strings.dur15s,
+      30 => strings.dur30s,
+      60 => strings.dur1min,
+      120 => strings.dur2min,
+      _ => strings.durAny,
+    };
+
+String _filterSummary(AppLocalizations strings, AppState state) {
+  final parts = <String>[];
+  if (state.excludedFolders.isNotEmpty) {
+    parts.add(strings.hiddenFoldersCount(state.excludedFolders.length));
+  }
+  if (state.minDurationMs > 0) {
+    parts.add(strings.minActive(
+        _durationLabel(strings, state.minDurationMs ~/ 1000)));
+  }
+  if (parts.isEmpty) return strings.filtersOff;
+  return parts.join(' · ');
+}
+
+/// Minimum-duration chips for the library filter.
+class _DurationChips extends StatelessWidget {
+  const _DurationChips();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final strings = t(context);
+    const options = [0, 15, 30, 60, 120];
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(72, 0, 16, 4),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          for (final seconds in options)
+            ChoiceChip(
+              label: Text(_durationLabel(strings, seconds)),
+              selected: state.minDurationMs == seconds * 1000,
+              onSelected: (_) => state.setMinDuration(seconds * 1000),
+            ),
         ],
       ),
     );

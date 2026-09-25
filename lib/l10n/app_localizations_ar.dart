@@ -739,6 +739,80 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get filtersSection => 'مرشحات المكتبة';
+
+  @override
+  String get minDuration => 'الحد الأدنى للمدة';
+
+  @override
+  String get durAny => 'الكل';
+
+  @override
+  String get dur15s => '15 ثانية';
+
+  @override
+  String get dur30s => '30 ثانية';
+
+  @override
+  String get dur1min => 'دقيقة';
+
+  @override
+  String get dur2min => 'دقيقتان';
+
+  @override
+  String get hiddenFolders => 'المجلدات المخفية';
+
+  @override
+  String get filtersOff => 'كل شيء معروض';
+
+  @override
+  String hiddenFoldersCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n مجلد مخفي',
+      few: '$n مجلدات مخفية',
+      two: 'مجلدان مخفيان',
+      one: 'مجلد مخفي واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String minActive(String label) {
+    return '≥ $label';
+  }
+
+  @override
+  String get folderTitle => 'المجلدات المخفية';
+
+  @override
+  String get folderBody =>
+      'ألغِ تحديد مجلد لإخفاء صوتياته من المكتبة. لا يُحذف أي شيء.';
+
+  @override
+  String get hideMessaging => 'إخفاء صوتيات واتساب وتيليغرام';
+
+  @override
+  String messagingHidden(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'تم إخفاء $n مجلد مراسلة',
+      few: 'تم إخفاء $n مجلدات مراسلة',
+      two: 'تم إخفاء مجلدي مراسلة',
+      one: 'تم إخفاء مجلد مراسلة واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noMessagingFound => 'لا توجد مجلدات صوتيات مراسلة.';
+
+  @override
+  String get showAll => 'عرض الكل';
+
+  @override
   String get cancel => 'إلغاء';
 
   @override

@@ -739,6 +739,76 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get filtersSection => 'Library filters';
+
+  @override
+  String get minDuration => 'Minimum duration';
+
+  @override
+  String get durAny => 'Any';
+
+  @override
+  String get dur15s => '15 sec';
+
+  @override
+  String get dur30s => '30 sec';
+
+  @override
+  String get dur1min => '1 min';
+
+  @override
+  String get dur2min => '2 min';
+
+  @override
+  String get hiddenFolders => 'Hidden folders';
+
+  @override
+  String get filtersOff => 'Everything is listed';
+
+  @override
+  String hiddenFoldersCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hidden folders',
+      one: '1 hidden folder',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String minActive(String label) {
+    return '≥ $label';
+  }
+
+  @override
+  String get folderTitle => 'Hidden folders';
+
+  @override
+  String get folderBody =>
+      'Untick a folder to hide its audio from the library. Nothing is deleted.';
+
+  @override
+  String get hideMessaging => 'Hide WhatsApp & Telegram audio';
+
+  @override
+  String messagingHidden(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n messaging folders hidden',
+      one: '1 messaging folder hidden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noMessagingFound => 'No messaging audio folders found.';
+
+  @override
+  String get showAll => 'Show all';
+
+  @override
   String get cancel => 'Cancel';
 
   @override
